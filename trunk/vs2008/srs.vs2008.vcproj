@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\src\win32;.\"
+				AdditionalIncludeDirectories="..\src\win32;..\src\core;..\src\main;.\inc"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;MALLOC_STACK;ZLIB_WINAPI;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;ASMV;ASMINF;WIN32_LEAN_AND_MEAN;SRS_SSL;SRS_HLS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -116,7 +116,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="..\src\win32;.\"
+				AdditionalIncludeDirectories="..\src\win32;..\src\core;..\src\main;.\inc"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;MALLOC_STACK;ZLIB_WINAPI;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;ASMV;ASMINF;WIN32_LEAN_AND_MEAN;SRS_SSL;SRS_HLS"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
@@ -135,7 +135,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="Ws2_32.lib Psapi.lib IPHLPAPI.lib .\lib\ssleay32.lib .\lib\libeay32.lib .\lib\librtmp.lib .\lib\zlibstat.lib"
+				AdditionalDependencies="Ws2_32.lib Psapi.lib IPHLPAPI.lib .\lib\ssleay32.lib .\lib\libeay32.lib .\lib\zlibstat.lib"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
