@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2013 winlin
+Copyright (c) 2013-2014 winlin
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -23,64 +23,97 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <srs_core.hpp>
 
-#ifndef WIN32
-#include <sys/time.h>
-#else
-#include <time.h>
-#endif
-
+#include <string.h>
 #ifndef WIN32
 #include <netdb.h>
 #include <arpa/inet.h>
 #else
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include "util.h"
+#include <WS2tcpip.h>
+#include <WinSock2.h>
 #endif
 
-#include <srs_core_log.hpp>
+using namespace std;
 
-static int64_t _srs_system_time_us_cache = 0;
-
-int64_t srs_get_system_time_ms()
+string srs_string_replace(string str, string old_str, string new_str)
 {
-	return _srs_system_time_us_cache / 1000;
-}
-
-void srs_update_system_time_ms()
-{
-    timeval now;
+    std::string ret = str;
     
-    gettimeofday(&now, NULL);
-
-#ifndef WIN32
-    // we must convert the tv_sec/tv_usec to int64_t.
-    _srs_system_time_us_cache = now.tv_sec * 1000 * 1000 + now.tv_usec;
-#else
-	_srs_system_time_us_cache = ((int64_t )now.tv_sec) * 1000 * 1000 + now.tv_usec;
-#endif
+    if (old_str == new_str) {
+        return ret;
+    }
     
-    _srs_system_time_us_cache = srs_max(0, _srs_system_time_us_cache);
+    size_t pos = 0;
+    while ((pos = ret.find(old_str, pos)) != std::string::npos) {
+        ret = ret.replace(pos, old_str.length(), new_str);
+    }
+    
+    return ret;
 }
 
-std::string srs_replace(std::string str, std::string old_str, std::string new_str)
+string srs_string_trim_end(string str, string trim_chars)
 {
-	std::string ret = str;
-	
-	if (old_str == new_str) {
-		return ret;
-	}
-	
-	size_t pos = 0;
-	while ((pos = ret.find(old_str, pos)) != std::string::npos) {
-		ret = ret.replace(pos, old_str.length(), new_str);
-		pos += new_str.length();
-	}
-	
-	return ret;
+    std::string ret = str;
+    
+    for (int i = 0; i < (int)trim_chars.length(); i++) {
+        char ch = trim_chars.at(i);
+        
+        while (!ret.empty() && ret.at(ret.length() - 1) == ch) {
+            ret.erase(ret.end() - 1);
+            
+            // ok, matched, should reset the search
+            i = 0;
+        }
+    }
+    
+    return ret;
 }
 
-std::string srs_dns_resolve(std::string host)
+string srs_string_trim_start(string str, string trim_chars)
+{
+    std::string ret = str;
+    
+    for (int i = 0; i < (int)trim_chars.length(); i++) {
+        char ch = trim_chars.at(i);
+        
+        while (!ret.empty() && ret.at(0) == ch) {
+            ret.erase(ret.begin());
+            
+            // ok, matched, should reset the search
+            i = 0;
+        }
+    }
+    
+    return ret;
+}
+
+string srs_string_remove(string str, string remove_chars)
+{
+    std::string ret = str;
+    
+    for (int i = 0; i < (int)remove_chars.length(); i++) {
+        char ch = remove_chars.at(i);
+        
+        for (std::string::iterator it = ret.begin(); it != ret.end();) {
+            if (ch == *it) {
+                it = ret.erase(it);
+                
+                // ok, matched, should reset the search
+                i = 0;
+            } else {
+                ++it;
+            }
+        }
+    }
+    
+    return ret;
+}
+
+bool srs_string_ends_with(string str, string flag)
+{
+    return str.rfind(flag) == str.length() - flag.length();
+}
+
+string srs_dns_resolve(string host)
 {
     if (inet_addr(host.c_str()) != INADDR_NONE) {
         return host;
@@ -88,7 +121,6 @@ std::string srs_dns_resolve(std::string host)
     
     hostent* answer = gethostbyname(host.c_str());
     if (answer == NULL) {
-        srs_error("dns resolve host %s error.", host.c_str());
         return "";
     }
     
@@ -96,33 +128,28 @@ std::string srs_dns_resolve(std::string host)
     memset(ipv4, 0, sizeof(ipv4));
     for (int i = 0; i < answer->h_length; i++) {
         inet_ntop(AF_INET, answer->h_addr_list[i], ipv4, sizeof(ipv4));
-        srs_info("dns resolve host %s to %s.", host.c_str(), ipv4);
         break;
     }
     
     return ipv4;
 }
 
-void srs_vhost_resolve(std::string& vhost, std::string& app)
+bool srs_is_little_endian()
 {
-	app = srs_replace(app, "...", "?");
-	
-	size_t pos = 0;
-	if ((pos = app.find("?")) == std::string::npos) {
-		return;
-	}
-	
-	std::string query = app.substr(pos + 1);
-	app = app.substr(0, pos);
-	
-	if ((pos = query.find("vhost?")) != std::string::npos
-		|| (pos = query.find("vhost=")) != std::string::npos
-		|| (pos = query.find("Vhost?")) != std::string::npos
-		|| (pos = query.find("Vhost=")) != std::string::npos
-	) {
-		query = query.substr(pos + 6);
-		if (!query.empty()) {
-			vhost = query;
-		}
-	}
+    // convert to network(big-endian) order, if not equals, 
+    // the system is little-endian, so need to convert the int64
+    static int little_endian_check = -1;
+    
+    if(little_endian_check == -1) {
+        union {
+            int32_t i;
+            int8_t c;
+        } little_check_union;
+        
+        little_check_union.i = 0x01;
+        little_endian_check = little_check_union.c;
+    }
+    
+    return (little_endian_check == 1);
 }
+

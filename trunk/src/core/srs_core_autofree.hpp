@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2013 winlin
+Copyright (c) 2013-2014 winlin
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -34,7 +34,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 * auto free the instance in the current scope.
 */
 #define SrsAutoFree(className, instance, is_array) \
-	__SrsAutoFree<className> _auto_free_##instance(&instance, is_array)
+    __SrsAutoFree<className> _auto_free_##instance((className**)&instance, is_array)
     
 template<class T>
 class __SrsAutoFree
