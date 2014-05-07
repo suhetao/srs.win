@@ -233,18 +233,20 @@ int _st_GetError(int err);
 
 #define MD_SETJMP(env) setjmp(env)
 #define MD_LONGJMP(env, val) longjmp(env, val)
+#define MD_JB_SP 4
+#define MD_GET_SP(_t) (_t)->context[MD_JB_SP]
 
-#define MD_INIT_CONTEXT(_thread, _sp, _main)            \
-  ST_BEGIN_MACRO                                        \
-  (void) MD_SETJMP((_thread)->context);                 \
-  (_thread)->context[4] = (long) (_sp); \
-  (_thread)->context[5] = (long) _main; \
-  ST_END_MACRO
+#define MD_INIT_CONTEXT(_thread, _sp, _main) \
+	ST_BEGIN_MACRO                             \
+	if (MD_SETJMP((_thread)->context))         \
+	_main();                                 \
+	MD_GET_SP(_thread) = (long) (_sp);         \
+	ST_END_MACRO
 
 #define MD_GET_UTIME()            \
   struct _timeb tb;              \
   _ftime(&tb);             \
-  return((tb.time*1000000)+(tb.millitm*1000));
+  return((tb.time*1000000LL)+(tb.millitm*1000));
 
 #elif defined (OSF1)
 

@@ -55,6 +55,9 @@
 #include <errno.h>
 #include "common.h"
 
+#define open _open
+#define close _close
+
 #if EAGAIN != EWOULDBLOCK
 #define _IO_NOT_READY_ERROR  ((errno == EAGAIN) || (errno == EWOULDBLOCK))
 #else
@@ -212,6 +215,9 @@ static _st_netfd_t *_st_netfd_new(int osfd, int nonblock, int is_socket)
 	}
 	fds[i]=osfd;  /* add osfd to index */
 
+	if ((*_st_eventsys->fd_new)(i) < 0)
+		return NULL;
+
 	if (_st_netfd_freelist) {
 		fd = _st_netfd_freelist;
 		_st_netfd_freelist = _st_netfd_freelist->next;
@@ -246,6 +252,9 @@ APIEXPORT _st_netfd_t *st_netfd_open_socket(int osfd)
 
 APIEXPORT int st_netfd_close(_st_netfd_t *fd)
 {
+	if ((*_st_eventsys->fd_close)(fd->osfd) < 0)
+		return -1;
+
 	st_netfd_free(fd);
 	closesocket(fds[fd->osfd]);
 	fds[fd->osfd]=0;
@@ -345,7 +354,7 @@ APIEXPORT _st_netfd_t *st_accept(_st_netfd_t *fd, struct sockaddr *addr, int *ad
 	return newfd;
 }
 
-APIEXPORT int st_connect(_st_netfd_t *fd, struct sockaddr *addr, int addrlen,
+APIEXPORT int st_connect(_st_netfd_t *fd, const struct sockaddr *addr, int addrlen,
 						 st_utime_t timeout)
 {
 	int n, err = 0;
@@ -474,7 +483,7 @@ APIEXPORT int st_recvfrom(_st_netfd_t *fd, void *buf, int len, struct sockaddr *
 }
 
 
-APIEXPORT int st_sendto(_st_netfd_t *fd, const void *msg, int len, struct sockaddr *to,
+APIEXPORT int st_sendto(_st_netfd_t *fd, const void *msg, int len, const struct sockaddr *to,
 						int tolen, st_utime_t timeout)
 {
 	int n;

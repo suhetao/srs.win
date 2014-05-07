@@ -60,11 +60,14 @@ typedef int pid_t;
 #else
 #define APIEXPORT
 #endif
-typedef unsigned long st_utime_t;
-typedef void *st_thread_t;
-typedef void *st_cond_t;
-typedef void *st_mutex_t;
-typedef void *st_netfd_t;
+typedef unsigned long long  st_utime_t;
+typedef struct _st_thread * st_thread_t;
+typedef struct _st_cond *   st_cond_t;
+typedef struct _st_mutex *  st_mutex_t;
+typedef struct _st_netfd *  st_netfd_t;
+#ifdef ST_SWITCH_CB
+typedef void (*st_switch_cb_t)(void);
+#endif
 
 #define ST_EVENTSYS_DEFAULT 0
 #define ST_EVENTSYS_SELECT  1
@@ -134,7 +137,7 @@ APIEXPORT int st_recvfrom(st_netfd_t fd, void *buf, int len,
                        struct sockaddr *from, int *fromlen,
                        st_utime_t timeout);
 APIEXPORT int st_sendto(st_netfd_t fd, const void *msg, int len,
-                     struct sockaddr *to, int tolen, st_utime_t timeout);
+                     const struct sockaddr *to, int tolen, st_utime_t timeout);
 APIEXPORT st_netfd_t st_open(const char *path, int oflags, mode_t mode);
 
 //APIEXPORT st_errno(void);

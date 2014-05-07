@@ -58,8 +58,6 @@ time_t _st_curr_time = 0;       /* Current time as returned by time(2) */
 st_utime_t _st_last_tset;       /* Last time it was fetched */
 
 
-
-
 int st_poll(struct pollfd *pds, int npds, st_utime_t timeout)
 {
 	struct pollfd *pd;
@@ -192,6 +190,7 @@ int st_init(void)
 
   return 0;
 }
+
 
 #ifdef ST_SWITCH_CB
 st_switch_cb_t st_set_switch_in_cb(st_switch_cb_t cb)

@@ -494,11 +494,13 @@ int SrsServer::initialize_st()
 	int ret = ERROR_SUCCESS;
 
 	// use linux epoll.
+/*
 	if (st_set_eventsys(ST_EVENTSYS_ALT) == -1) {
 		ret = ERROR_ST_SET_EPOLL;
 		srs_error("st_set_eventsys use linux epoll failed. ret=%d", ret);
 		return ret;
 	}
+*/
 	srs_verbose("st_set_eventsys use linux epoll success");
 
 	if(st_init() != 0){

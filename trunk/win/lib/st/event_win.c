@@ -5,6 +5,8 @@
 #include <errno.h>
 #include "common.h"
 
+extern int fds[FD_SETSIZE+5];
+
 static struct _st_seldata {
 	fd_set fd_read_set, fd_write_set, fd_exception_set;
 	int fd_ref_cnts[FD_SETSIZE][3];
@@ -45,7 +47,7 @@ ST_HIDDEN int _st_select_pollset_add(struct pollfd *pds, int npds)
 
     /* Do checks up front */
     for (pd = pds; pd < epd; pd++) {
-        if (pd->fd < 0 || pd->fd >= FD_SETSIZE || !pd->events ||
+		if (pd->fd < 0 || pd->fd >= FD_SETSIZE || !pd->events ||
             (pd->events & ~(POLLIN | POLLOUT | POLLPRI))) {
             errno = EINVAL;
             return -1;
@@ -54,15 +56,15 @@ ST_HIDDEN int _st_select_pollset_add(struct pollfd *pds, int npds)
 
     for (pd = pds; pd < epd; pd++) {
         if (pd->events & POLLIN) {
-            FD_SET(pd->fd, &_ST_SELECT_READ_SET);
+			FD_SET(fds[pd->fd], &_ST_SELECT_READ_SET);
             _ST_SELECT_READ_CNT(pd->fd)++;
         }
         if (pd->events & POLLOUT) {
-            FD_SET(pd->fd, &_ST_SELECT_WRITE_SET);
+			FD_SET(fds[pd->fd], &_ST_SELECT_WRITE_SET);
             _ST_SELECT_WRITE_CNT(pd->fd)++;
         }
         if (pd->events & POLLPRI) {
-            FD_SET(pd->fd, &_ST_SELECT_EXCEP_SET);
+			FD_SET(fds[pd->fd], &_ST_SELECT_EXCEP_SET);
             _ST_SELECT_EXCEP_CNT(pd->fd)++;
         }
         if (_ST_SELECT_MAX_OSFD < pd->fd)
@@ -80,15 +82,15 @@ ST_HIDDEN void _st_select_pollset_del(struct pollfd *pds, int npds)
     for (pd = pds; pd < epd; pd++) {
         if (pd->events & POLLIN) {
             if (--_ST_SELECT_READ_CNT(pd->fd) == 0)
-                FD_CLR(pd->fd, &_ST_SELECT_READ_SET);
+                FD_CLR(fds[pd->fd], &_ST_SELECT_READ_SET);
         }
         if (pd->events & POLLOUT) {
             if (--_ST_SELECT_WRITE_CNT(pd->fd) == 0)
-                FD_CLR(pd->fd, &_ST_SELECT_WRITE_SET);
+                FD_CLR(fds[pd->fd], &_ST_SELECT_WRITE_SET);
         }
         if (pd->events & POLLPRI) {
             if (--_ST_SELECT_EXCEP_CNT(pd->fd) == 0)
-                FD_CLR(pd->fd, &_ST_SELECT_EXCEP_SET);
+                FD_CLR(fds[pd->fd], &_ST_SELECT_EXCEP_SET);
         }
     }
 }
@@ -112,11 +114,11 @@ ST_HIDDEN void _st_select_find_bad_fd(void)
         pq_max_osfd = -1;
       
         for (pds = pq->pds; pds < epds; pds++) {
-            osfd = pds->fd;
+			osfd = pds->fd;
             pds->revents = 0;
             if (pds->events == 0)
                 continue;
-			if (ioctlsocket( osfd, FIONBIO , &noBlock ) < 0){
+			if (ioctlsocket(fds[osfd], FIONBIO , &noBlock ) < 0){
                 pds->revents = POLLNVAL;
                 notify = 1;
             }
@@ -133,21 +135,21 @@ ST_HIDDEN void _st_select_find_bad_fd(void)
              * because this I/O request is being removed from the ioq
              */
             for (pds = pq->pds; pds < epds; pds++) {
-                osfd = pds->fd;
+				osfd = pds->fd;
                 events = pds->events;
                 if (events & POLLIN) {
                     if (--_ST_SELECT_READ_CNT(osfd) == 0) {
-                        FD_CLR(osfd, &_ST_SELECT_READ_SET);
+                        FD_CLR(fds[osfd], &_ST_SELECT_READ_SET);
                     }
                 }
                 if (events & POLLOUT) {
                     if (--_ST_SELECT_WRITE_CNT(osfd) == 0) {
-                        FD_CLR(osfd, &_ST_SELECT_WRITE_SET);
+                        FD_CLR(fds[osfd], &_ST_SELECT_WRITE_SET);
                     }
                 }
                 if (events & POLLPRI) {
                     if (--_ST_SELECT_EXCEP_CNT(osfd) == 0) {
-                        FD_CLR(osfd, &_ST_SELECT_EXCEP_SET);
+                        FD_CLR(fds[osfd], &_ST_SELECT_EXCEP_SET);
                     }
                 }
             }
@@ -210,16 +212,16 @@ ST_HIDDEN void _st_select_dispatch(void)
             pq_max_osfd = -1;
       
             for (pds = pq->pds; pds < epds; pds++) {
-                osfd = pds->fd;
+				osfd = pds->fd;
                 events = pds->events;
                 revents = 0;
-                if ((events & POLLIN) && FD_ISSET(osfd, rp)) {
+                if ((events & POLLIN) && FD_ISSET(fds[osfd], rp)) {
                     revents |= POLLIN;
                 }
-                if ((events & POLLOUT) && FD_ISSET(osfd, wp)) {
+                if ((events & POLLOUT) && FD_ISSET(fds[osfd], wp)) {
                     revents |= POLLOUT;
                 }
-                if ((events & POLLPRI) && FD_ISSET(osfd, ep)) {
+                if ((events & POLLPRI) && FD_ISSET(fds[osfd], ep)) {
                     revents |= POLLPRI;
                 }
                 pds->revents = revents;
@@ -238,21 +240,21 @@ ST_HIDDEN void _st_select_dispatch(void)
                  * because this I/O request is being removed from the ioq
                  */
                 for (pds = pq->pds; pds < epds; pds++) {
-                    osfd = pds->fd;
+					osfd = pds->fd;
                     events = pds->events;
                     if (events & POLLIN) {
                         if (--_ST_SELECT_READ_CNT(osfd) == 0) {
-                            FD_CLR(osfd, &_ST_SELECT_READ_SET);
+                            FD_CLR(fds[osfd], &_ST_SELECT_READ_SET);
                         }
                     }
                     if (events & POLLOUT) {
                         if (--_ST_SELECT_WRITE_CNT(osfd) == 0) {
-                            FD_CLR(osfd, &_ST_SELECT_WRITE_SET);
+                            FD_CLR(fds[osfd], &_ST_SELECT_WRITE_SET);
                         }
                     }
                     if (events & POLLPRI) {
                         if (--_ST_SELECT_EXCEP_CNT(osfd) == 0) {
-                            FD_CLR(osfd, &_ST_SELECT_EXCEP_SET);
+                            FD_CLR(fds[osfd], &_ST_SELECT_EXCEP_SET);
                         }
                     }
                 }
