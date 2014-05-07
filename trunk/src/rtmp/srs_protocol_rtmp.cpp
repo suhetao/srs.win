@@ -269,11 +269,7 @@ int SrsHandshakeBytes::create_c0c1()
     
     // plain text required.
     c0c1[0] = 0x03;
-#ifndef WIN32
     *(int32_t*)(c0c1 + 1) = ::time(NULL);
-#else
-	*(int32_t*)(c0c1 + 1) = time(NULL);
-#endif
     *(int32_t*)(c0c1 + 1 + 4) = 0x00;
     
     return ret;

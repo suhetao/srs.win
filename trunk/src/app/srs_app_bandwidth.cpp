@@ -23,12 +23,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <srs_app_bandwidth.hpp>
 
-#ifndef WIN32
 #include <arpa/inet.h>
-#else
-#include <ws2tcpip.h>
-#include <WinSock2.h>
-#endif
 #include <sstream>
 
 using namespace std;
@@ -49,7 +44,6 @@ SrsBandwidth::~SrsBandwidth()
 {
 }
 
-#ifndef WIN32
 int SrsBandwidth::bandwidth_test(SrsRequest* _req, st_netfd_t stfd, SrsRtmpServer* _rtmp)
 {
     int ret = ERROR_SUCCESS;
@@ -139,95 +133,7 @@ int SrsBandwidth::get_local_ip(st_netfd_t stfd, char *&local_ip)
 
     return ret;
 }
-#else
-int SrsBandwidth::bandwidth_test(SrsRequest* _req, SOCKET fd, SrsRtmpServer* _rtmp)
-{
-	int ret = ERROR_SUCCESS;
 
-	rtmp = _rtmp;
-	req = _req;
-
-	if (!_srs_config->get_bw_check_enabled(req->vhost)) {
-		return ret;
-	}
-
-	// validate the bandwidth check key
-	std::string key = "key=" + _srs_config->get_bw_check_key(req->vhost);
-	if (req->tcUrl.find(key) == std::string::npos) {
-		ret = ERROR_SYSTEM_BANDWIDTH_KEY;
-		srs_error("check the vhost=%s %s failed, tcUrl=%s, ret=%d", 
-			req->vhost.c_str(), key.c_str(), req->tcUrl.c_str(), ret);
-		return ret;
-	}
-
-	// shared global last check time,
-	// to avoid attach by bandwidth check,
-	// if client request check in the window(specifeid by interval),
-	// directly reject the request.
-	static int64_t last_check_time = 0;
-	int interval_ms = _srs_config->get_bw_check_interval_ms(req->vhost);
-
-	int64_t time_now = srs_get_system_time_ms();
-	// reject the connection in the interval window.
-	if (last_check_time > 0 && time_now - last_check_time < interval_ms) {
-		ret = ERROR_SYSTEM_BANDWIDTH_DENIED;
-		srs_trace("bandcheck denied, "
-			"last_check=%"PRId64", now=%"PRId64", interval=%d",
-			last_check_time, time_now, interval_ms);
-
-		rtmp->response_connect_reject(req, "bandcheck rejected");
-		return ret;
-	}
-
-	// accept and do bandwidth check.
-	last_check_time = time_now;
-
-	char* local_ip = 0;
-	if ((ret = get_local_ip(fd, local_ip)) != ERROR_SUCCESS) {
-		srs_error("get local ip failed. ret = %d", ret);
-		return ret;
-	}
-
-	if ((ret = rtmp->response_connect_app(req, local_ip)) != ERROR_SUCCESS) {
-		srs_error("response connect app failed. ret=%d", ret);
-		return ret;
-	}
-
-	return do_bandwidth_check();
-}
-
-int SrsBandwidth::get_local_ip(SOCKET fd, char *&local_ip)
-{
-	int ret = ERROR_SUCCESS;
-
-	// discovery client information
-	sockaddr_in addr;
-	socklen_t addrlen = sizeof(addr);
-	if (getsockname(fd, (sockaddr*)&addr, &addrlen) == -1) {
-		ret = ERROR_SOCKET_GET_LOCAL_IP;
-		srs_error("discovery local ip information failed. ret=%d", ret);
-		return ret;
-	}
-	srs_verbose("get local ip success.");
-
-	// ip v4 or v6
-	char buf[INET6_ADDRSTRLEN];
-	memset(buf, 0, sizeof(buf));
-
-	if ((inet_ntop(addr.sin_family, &addr.sin_addr, buf, sizeof(buf))) == NULL) {
-		ret = ERROR_SOCKET_GET_LOCAL_IP;
-		srs_error("convert local ip information failed. ret=%d", ret);
-		return ret;
-	}
-
-	local_ip = new char[strlen(buf) + 1];
-	strcpy(local_ip, buf);
-
-	srs_verbose("get local ip of client ip=%s, fd=%d", buf, fd);
-
-	return ret;
-}
-#endif
 int SrsBandwidth::do_bandwidth_check()
 {
     int ret = ERROR_SUCCESS;
@@ -355,21 +261,15 @@ int SrsBandwidth::check_play(
     // send play data to client
     int64_t current_time = srs_get_system_time_ms();
     int size = 1024; // TODO: FIXME: magic number
-#ifndef WIN32
-    char random_data[size];
-#else
+	//modified by hetao.su
+    //char random_data[size];
 	char random_data[1024];
-#endif
     memset(random_data, 'A', size);
 
     int interval = 0;
     int data_count = 1;
     while ( (srs_get_system_time_ms() - current_time) < duration_ms ) {
-#ifndef WIN32
         st_usleep(interval);
-#else
-		usleep(interval);
-#endif
         
         // TODO: FIXME: use shared ptr message.
         SrsBandwidthPacket* pkt = SrsBandwidthPacket::create_playing();
@@ -398,11 +298,7 @@ int SrsBandwidth::check_play(
                 kbps = play_bytes * 8 / (srs_get_system_time_ms() - current_time);
 
             if (kbps > max_play_kbps) {
-#ifndef WIN32
-				st_usleep(500);
-#else
-				usleep(500);
-#endif
+                st_usleep(500);
             } else {
                 break;
             }
@@ -491,11 +387,7 @@ int SrsBandwidth::check_publish(
     // recv publish msgs until @duration_ms ms
     int64_t current_time = srs_get_system_time_ms();
     while ( (srs_get_system_time_ms() - current_time) < duration_ms ) {
-#ifndef WIN32
-		st_usleep(0);
-#else
-		usleep(0);
-#endif
+        st_usleep(0);
         
         SrsMessage* msg = NULL;
         if ((ret = rtmp->recv_message(&msg)) != ERROR_SUCCESS) {
@@ -512,11 +404,7 @@ int SrsBandwidth::check_publish(
                 kbps = publish_bytes * 8 / (srs_get_system_time_ms() - current_time);
 
             if (kbps > max_pub_kbps) {
-#ifndef WIN32
-				st_usleep(500);
-#else
-				usleep(500);
-#endif
+                st_usleep(500);
             } else {
                 break;
             }

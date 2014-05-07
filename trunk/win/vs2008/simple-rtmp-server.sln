@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "st", "st.vcproj", "{73121819-A315-4CDC-B31A-43513C64F072}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "simple-rtmp-server", "simple-rtmp-server.vcproj", "{4286C436-E1A9-4057-86DB-7C7D2CC1AEA8}"
 EndProject
 Global
@@ -9,6 +11,10 @@ Global
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{73121819-A315-4CDC-B31A-43513C64F072}.Debug|Win32.ActiveCfg = Debug|Win32
+		{73121819-A315-4CDC-B31A-43513C64F072}.Debug|Win32.Build.0 = Debug|Win32
+		{73121819-A315-4CDC-B31A-43513C64F072}.Release|Win32.ActiveCfg = Release|Win32
+		{73121819-A315-4CDC-B31A-43513C64F072}.Release|Win32.Build.0 = Release|Win32
 		{4286C436-E1A9-4057-86DB-7C7D2CC1AEA8}.Debug|Win32.ActiveCfg = Debug|Win32
 		{4286C436-E1A9-4057-86DB-7C7D2CC1AEA8}.Debug|Win32.Build.0 = Debug|Win32
 		{4286C436-E1A9-4057-86DB-7C7D2CC1AEA8}.Release|Win32.ActiveCfg = Release|Win32

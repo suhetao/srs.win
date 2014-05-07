@@ -30,13 +30,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <srs_core.hpp>
 
-#ifdef WIN32
-#ifndef ERROR_SUCCESS
 #define ERROR_SUCCESS                       0
-#endif
-#else
-#define ERROR_SUCCESS                       0
-#endif
 
 #define ERROR_ST_SET_EPOLL                  100
 #define ERROR_ST_INITIALIZE                 101

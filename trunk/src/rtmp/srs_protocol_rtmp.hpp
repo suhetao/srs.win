@@ -97,14 +97,8 @@ public:
 /**
 * the response to client.
 */
-#ifndef WIN32
 struct SrsResponse
 {
-#else
-class SrsResponse
-{
-public:
-#endif
     int stream_id;
     
     SrsResponse();

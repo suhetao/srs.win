@@ -24,14 +24,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <srs_app_forward.hpp>
 
 #include <stdlib.h>
-#ifndef WIN32
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#else
-#include <WS2tcpip.h>
-#include <WinSock2.h>
-#endif
 
 #include <srs_app_source.hpp>
 #include <srs_core_autofree.hpp>
@@ -54,11 +49,7 @@ SrsForwarder::SrsForwarder(SrsSource* _source)
     
     io = NULL;
     client = NULL;
-#ifndef WIN32
     stfd = NULL;
-#else
-	fd = INVALID_SOCKET;
-#endif
     stream_id = 0;
 
     pthread = new SrsThread(this, SRS_FORWARDER_SLEEP_US);
@@ -250,11 +241,7 @@ int SrsForwarder::cycle()
 
 void SrsForwarder::close_underlayer_socket()
 {
-#ifndef WIN32
     srs_close_stfd(stfd);
-#else
-	closesocket(fd);
-#endif
 }
 
 int SrsForwarder::connect_server()
@@ -275,7 +262,6 @@ int SrsForwarder::connect_server()
         return ret;
     }
     
-#ifndef WIN32
     srs_assert(!stfd);
     stfd = st_netfd_open_socket(sock);
     if(stfd == NULL){
@@ -283,18 +269,11 @@ int SrsForwarder::connect_server()
         srs_error("st_netfd_open_socket failed. ret=%d", ret);
         return ret;
     }
-#else
-	fd = sock;
-#endif
     
     srs_freep(client);
     srs_freep(io);
     
-#ifndef WIN32
     io = new SrsSocket(stfd);
-#else
-	io = new SrsSocket(fd);
-#endif
     client = new SrsRtmpClient(io);
     
     // connect to server.
@@ -309,12 +288,9 @@ int SrsForwarder::connect_server()
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = inet_addr(ip.c_str());
-
-#ifndef WIN32
-    if (st_connect(stfd, (const struct sockaddr*)&addr, sizeof(sockaddr_in), ST_UTIME_NO_TIMEOUT) == -1){
-#else
-	if (connect(fd, (struct sockaddr*)&addr, sizeof(sockaddr_in)) == -1){
-#endif
+    
+	//if (st_connect(stfd, (const struct sockaddr*)&addr, sizeof(sockaddr_in), ST_UTIME_NO_TIMEOUT) == -1){
+	if (st_connect(stfd, (struct sockaddr*)&addr, sizeof(sockaddr_in), ST_UTIME_NO_TIMEOUT) == -1){
         ret = ERROR_ST_CONNECT;
         srs_error("connect to server error. ip=%s, port=%d, ret=%d", ip.c_str(), port, ret);
         return ret;
@@ -334,11 +310,7 @@ int SrsForwarder::forward()
 
     while (pthread->can_loop()) {
         // switch to other st-threads.
-#ifndef WIN32
         st_usleep(0);
-#else
-		usleep(0);
-#endif
 
         pithy_print.elapse();
 

@@ -28,11 +28,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <srs_librtmp.h>
 */
 
-#ifndef WIN32
 #include <sys/types.h>
-#else
-#include <inttypes.h>
-#endif
 
 /**
 * srs-librtmp is a librtmp like library,

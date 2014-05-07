@@ -29,9 +29,6 @@
 #include <direct.h>
 #define getcwd _getcwd
 
-typedef struct timeval timeval;
-int gettimeofday(struct timeval *tp, void *tzp);
-
 #define	_SC_NPROCESSORS_CONF		57
 #define	_SC_NPROCESSORS_ONLN		58
 
@@ -63,6 +60,8 @@ struct sigaction {
 #define S_ISGID 0
 #define S_IROTH 0
 #define S_IXOTH 0
+#define S_IRUSR 0
+#define S_IWUSR 0
 
 #define SIGHUP 1
 #define SIGQUIT 3
@@ -77,30 +76,17 @@ struct sigaction {
 #define F_SETFD 2
 #define FD_CLOEXEC 0x1
 
+#include <neterr.h>
+#ifndef ETIME
+#define ETIME ETIMEDOUT
+#endif
+
+typedef int ssize_t;
+
 int fcntl(int fildes, int cmd, ...);
-
-typedef struct iovec {
-	void *iov_base;
-	size_t iov_len;
-}iovec;
-ssize_t readv(int fd, const struct iovec *iov, unsigned int iov_cnt);
-ssize_t writev(int fd, const struct iovec *iov, unsigned int iov_cnt);
-
 void usleep(long usec);
 void initsocket(void);
 
-#ifndef WSAETIMEDOUT
-#define WSAETIMEDOUT            (WSABASEERR+60)
-#endif
-#ifndef WSAECONNRESET
-#define WSAECONNRESET           (WSABASEERR+54)
-#endif
-#ifndef ETIME
-#define ETIME WSAETIMEDOUT
-#endif
-#ifndef ECONNRESET
-#define ECONNRESET WSAECONNRESET
-#endif 
 
 #endif
 

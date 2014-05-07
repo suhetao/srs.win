@@ -39,11 +39,8 @@ class SrsRequest;
 class SrsHttpParser;
 class SrsFlvSegment;
 
-#ifndef WIN32
 #include <srs_app_st.hpp>
-#else
-#include <srs_app_win32.hpp>
-#endif
+
 /**
 * http client to GET/POST/PUT/DELETE uri
 */

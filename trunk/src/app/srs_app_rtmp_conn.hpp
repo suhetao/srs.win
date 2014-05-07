@@ -30,11 +30,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <srs_core.hpp>
 
-#ifndef WIN32
 #include <srs_app_st.hpp>
-#else
-#include <srs_app_win32.hpp>
-#endif
 #include <srs_app_conn.hpp>
 #include <srs_app_reload.hpp>
 
@@ -68,11 +64,7 @@ private:
     // @see https://github.com/winlinvip/simple-rtmp-server/issues/47
     int64_t duration;
 public:
-#ifndef WIN32
     SrsRtmpConn(SrsServer* srs_server, st_netfd_t client_stfd);
-#else
-	SrsRtmpConn(SrsServer* srs_server, SOCKET clientfd);
-#endif
     virtual ~SrsRtmpConn();
 protected:
     virtual int do_cycle();

@@ -24,14 +24,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <srs_app_edge.hpp>
 
 #include <stdlib.h>
-#ifndef WIN32
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#else
-#include <WS2tcpip.h>
-#include <WinSock2.h>
-#endif
 
 #include <srs_kernel_error.hpp>
 #include <srs_protocol_rtmp.hpp>
@@ -71,11 +66,7 @@ SrsEdgeIngester::SrsEdgeIngester()
     _req = NULL;
     origin_index = 0;
     stream_id = 0;
-#ifndef WIN32
     stfd = NULL;
-#else
-	fd = INVALID_SOCKET;
-#endif
     pthread = new SrsThread(this, SRS_EDGE_INGESTER_SLEEP_US);
 }
 
@@ -171,11 +162,7 @@ int SrsEdgeIngester::ingest()
 
     while (pthread->can_loop()) {
         // switch to other st-threads.
-#ifndef WIN32
-		st_usleep(0);
-#else
-		usleep(0);
-#endif
+        st_usleep(0);
         
         pithy_print.elapse();
         
@@ -256,11 +243,7 @@ int SrsEdgeIngester::process_publish_message(SrsMessage* msg)
 
 void SrsEdgeIngester::close_underlayer_socket()
 {
-#ifndef WIN32
     srs_close_stfd(stfd);
-#else
-	closesocket(fd);
-#endif
 }
 
 int SrsEdgeIngester::connect_server()
@@ -298,7 +281,6 @@ int SrsEdgeIngester::connect_server()
         return ret;
     }
     
-#ifndef WIN32
     srs_assert(!stfd);
     stfd = st_netfd_open_socket(sock);
     if(stfd == NULL){
@@ -306,18 +288,11 @@ int SrsEdgeIngester::connect_server()
         srs_error("st_netfd_open_socket failed. ret=%d", ret);
         return ret;
     }
-#else
-	fd = sock;
-#endif
     
     srs_freep(client);
     srs_freep(io);
     
-#ifndef WIN32
     io = new SrsSocket(stfd);
-#else
-	io = new SrsSocket(fd);
-#endif
     client = new SrsRtmpClient(io);
     
     // connect to server.
@@ -332,12 +307,9 @@ int SrsEdgeIngester::connect_server()
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = inet_addr(ip.c_str());
-
-#ifndef WIN32
-    if (st_connect(stfd, (const struct sockaddr*)&addr, sizeof(sockaddr_in), ST_UTIME_NO_TIMEOUT) == -1){
-#else
-	if (connect(fd, (struct sockaddr*)&addr, sizeof(sockaddr_in)) == -1){
-#endif
+    
+    //if (st_connect(stfd, (const struct sockaddr*)&addr, sizeof(sockaddr_in), ST_UTIME_NO_TIMEOUT) == -1){
+	if (st_connect(stfd, (struct sockaddr*)&addr, sizeof(sockaddr_in), ST_UTIME_NO_TIMEOUT) == -1){
         ret = ERROR_ST_CONNECT;
         srs_error("connect to server error. ip=%s, port=%d, ret=%d", ip.c_str(), port, ret);
         return ret;
@@ -355,11 +327,7 @@ SrsEdgeForwarder::SrsEdgeForwarder()
     _req = NULL;
     origin_index = 0;
     stream_id = 0;
-#ifndef WIN32
     stfd = NULL;
-#else
-	fd = INVALID_SOCKET;
-#endif
     pthread = new SrsThread(this, SRS_EDGE_FORWARDER_SLEEP_US);
     queue = new SrsMessageQueue();
     send_error_code = ERROR_SUCCESS;
@@ -447,18 +415,10 @@ int SrsEdgeForwarder::cycle()
 
     while (pthread->can_loop()) {
         // switch to other st-threads.
-#ifndef WIN32
-		st_usleep(0);
-#else
-		usleep(0);
-#endif
+        st_usleep(0);
         
         if (send_error_code != ERROR_SUCCESS) {
-#ifndef WIN32
-			st_usleep(SRS_EDGE_FORWARDER_ERROR_US);
-#else
-			usleep(SRS_EDGE_FORWARDER_ERROR_US);
-#endif
+            st_usleep(SRS_EDGE_FORWARDER_ERROR_US);
             continue;
         }
 
@@ -557,11 +517,7 @@ int SrsEdgeForwarder::proxy(SrsMessage* msg)
 
 void SrsEdgeForwarder::close_underlayer_socket()
 {
-#ifndef WIN32
     srs_close_stfd(stfd);
-#else
-	closesocket(fd);
-#endif
 }
 
 int SrsEdgeForwarder::connect_server()
@@ -599,7 +555,6 @@ int SrsEdgeForwarder::connect_server()
         return ret;
     }
     
-#ifndef WIN32
     srs_assert(!stfd);
     stfd = st_netfd_open_socket(sock);
     if(stfd == NULL){
@@ -607,18 +562,11 @@ int SrsEdgeForwarder::connect_server()
         srs_error("st_netfd_open_socket failed. ret=%d", ret);
         return ret;
     }
-#else
-	fd = sock;
-#endif
     
     srs_freep(client);
     srs_freep(io);
     
-#ifndef WIN32
     io = new SrsSocket(stfd);
-#else
-	io = new SrsSocket(fd);
-#endif
     client = new SrsRtmpClient(io);
     
     // connect to server.
@@ -633,12 +581,9 @@ int SrsEdgeForwarder::connect_server()
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = inet_addr(ip.c_str());
- 
-#ifndef WIN32
-    if (st_connect(stfd, (const struct sockaddr*)&addr, sizeof(sockaddr_in), ST_UTIME_NO_TIMEOUT) == -1){
-#else
-	if (connect(fd, (struct sockaddr*)&addr, sizeof(sockaddr_in)) == -1){
-#endif
+    
+    //if (st_connect(stfd, (const struct sockaddr*)&addr, sizeof(sockaddr_in), ST_UTIME_NO_TIMEOUT) == -1){
+	if (st_connect(stfd, (struct sockaddr*)&addr, sizeof(sockaddr_in), ST_UTIME_NO_TIMEOUT) == -1){
         ret = ERROR_ST_CONNECT;
         srs_error("connect to server error. ip=%s, port=%d, ret=%d", ip.c_str(), port, ret);
         return ret;

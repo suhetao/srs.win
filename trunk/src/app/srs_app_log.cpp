@@ -24,11 +24,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <srs_app_log.hpp>
 
 #include <stdarg.h>
-#ifndef WIN32
 #include <sys/time.h>
-#else
-#include <time.h>
-#endif
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -49,20 +45,12 @@ SrsThreadContext::~SrsThreadContext()
 void SrsThreadContext::generate_id()
 {
     static int id = 100;
-#ifdef WIN32
-	cache[GetCurrentThread()] = id++;
-#else
     cache[st_thread_self()] = id++;
-#endif
 }
 
 int SrsThreadContext::get_id()
 {
-#ifdef WIN32
-	return cache[GetCurrentThread()];
-#else
     return cache[st_thread_self()];
-#endif
 }
 
 // the max size of a line of log.
@@ -267,17 +255,14 @@ bool SrsFastLog::generate_header(bool error, const char* tag, int context_id, co
     
     // to calendar time
     struct tm* tm;
-#ifndef WIN32
-	if ((tm = localtime(&tv.tv_sec)) == NULL) {
-		return false;
-	}
-#else
+    //if ((tm = localtime(&tv.tv_sec)) == NULL) {
+	//	return false;
+    //}
 	time_t timep;
 	::time(&timep);
 	if ((tm = localtime(&timep)) == NULL) {
 		return false;
 	}
-#endif
     
     // write log header
     int log_header_size = -1;
@@ -368,18 +353,10 @@ void SrsFastLog::open_log_file()
     
     fd = ::open(filename.c_str(), O_RDWR | O_APPEND);
     
-#ifndef WIN32
     if(fd == -1 && errno == ENOENT) {
         fd = open(filename.c_str(), 
             O_RDWR | O_CREAT | O_TRUNC, 
             S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH
         );
     }
-#else
-	if(fd == -1 && errno == ENOENT) {
-		fd = open(filename.c_str(), 
-			O_RDWR | O_CREAT | O_TRUNC
-			);
-	}
-#endif
 }

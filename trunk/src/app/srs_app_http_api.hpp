@@ -37,11 +37,7 @@ class SrsHttpMessage;
 class SrsHttpParser;
 class SrsHttpHandler;
 
-#ifndef WIN32
 #include <srs_app_st.hpp>
-#else
-#include <srs_app_win32.hpp>
-#endif
 #include <srs_app_conn.hpp>
 #include <srs_app_http.hpp>
 

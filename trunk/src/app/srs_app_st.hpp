@@ -30,10 +30,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <srs_core.hpp>
 
-#ifndef WIN32
 #include <st.h>
-#else
-#endif
 
 // close the netfd, and close the underlayer fd.
 extern void srs_close_stfd(st_netfd_t& stfd);

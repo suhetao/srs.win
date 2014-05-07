@@ -32,14 +32,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vector>
 
-#ifndef WIN32
 #include <srs_app_st.hpp>
-#include <srs_app_thread.hpp>
-#else
-#include <srs_app_win32.hpp>
-#include <srs_app_thread_win32.hpp>
-#endif
 #include <srs_app_reload.hpp>
+#include <srs_app_thread.hpp>
 
 class SrsServer;
 class SrsConnection;
@@ -63,12 +58,8 @@ class SrsListener : public ISrsThreadHandler
 public:
     SrsListenerType _type;
 private:
-#ifndef WIN32
     int fd;
     st_netfd_t stfd;
-#else
-	SOCKET fd;
-#endif
     int _port;
     SrsServer* _server;
     SrsThread* pthread;
@@ -94,10 +85,7 @@ private:
     /* Per-process pipe which is used as a signal queue. */
     /* Up to PIPE_BUF/sizeof(int) signals can be queued up. */
     int sig_pipe[2];
-#ifndef WIN32
     st_netfd_t signal_read_stfd;
-#else
-#endif
 private:
     SrsServer* _server;
     SrsThread* pthread;
@@ -160,11 +148,7 @@ private:
     virtual void close_listeners(SrsListenerType type);
 // internal only
 public:
-#ifndef WIN32
     virtual int accept_client(SrsListenerType type, st_netfd_t client_stfd);
-#else
-	virtual int accept_client(SrsListenerType type, SOCKET client_fd);
-#endif
 // interface ISrsThreadHandler.
 public:
     virtual int on_reload_listen();

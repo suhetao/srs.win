@@ -38,11 +38,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define RTMP_VHOST_DEFAULT "__defaultVhost__"
 
 #define SRS_LOCALHOST "127.0.0.1"
-#ifndef WIN32
 #define SRS_CONF_DEFAULT_PID_FILE "./objs/srs.pid"
-#else
-#define SRS_CONF_DEFAULT_PID_FILE ".\\log\\srs.pid"
-#endif
 #define SRS_DEFAULT_CONF "conf/srs.conf"
 
 #define SRS_CONF_DEFAULT_HLS_PATH "./objs/nginx/html"

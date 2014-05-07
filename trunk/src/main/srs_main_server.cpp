@@ -25,10 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <stdlib.h>
 #include <sys/types.h>
-#ifndef WIN32
 #include <sys/wait.h>
-#else
-#endif
 
 #ifdef SRS_AUTO_GPERF_MP
     #include <gperftools/heap-profiler.h>
@@ -99,7 +96,7 @@ int main(int argc, char** argv)
     srs_trace("configure: "SRS_AUTO_USER_CONFIGURE);
     srs_trace("features: "SRS_AUTO_CONFIGURE);
 #ifdef SRS_AUTO_ARM_UBUNTU12
-    srs_trace("arm tool chain: "SRS_AUTO_ARM_TOOL_CHAIN);
+    srs_trace("arm tool chain: "SRS_AUTO_EMBEDED_TOOL_CHAIN);
 #endif
     
     if ((ret = _srs_server->initialize()) != ERROR_SUCCESS) {
@@ -116,7 +113,6 @@ int run()
         return run_master();
     }
     
-#ifndef WIN32
     srs_trace("start deamon mode...");
     
     int pid = fork();
@@ -153,8 +149,6 @@ int run()
 
     // son
     srs_trace("son(deamon) process running.");
-#else
-#endif
     
     return run_master();
 }
@@ -166,7 +160,7 @@ int run_master()
     if ((ret = _srs_server->initialize_signal()) != ERROR_SUCCESS) {
         return ret;
     }
-
+    
     if ((ret = _srs_server->acquire_pid_file()) != ERROR_SUCCESS) {
         return ret;
     }

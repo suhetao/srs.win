@@ -22,11 +22,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include <srs_kernel_utility.hpp>
-#ifndef WIN32
+
 #include <sys/time.h>
-#else
-#include <time.h>
-#endif
+#include <unistd.h>
 
 #include <srs_kernel_log.hpp>
 
@@ -67,11 +65,7 @@ SrsRusage::SrsRusage()
 {
     ok = false;
     sample_time = 0;
-#ifndef WIN32
     memset(&r, 0, sizeof(rusage));
-#else
-	m_usage_time = 0.0f;
-#endif
 }
 
 SrsRusage* srs_get_system_rusage()
@@ -81,14 +75,10 @@ SrsRusage* srs_get_system_rusage()
 
 void srs_update_system_rusage()
 {
-#ifndef WIN32
     if (getrusage(RUSAGE_SELF, &_srs_system_rusage.r) < 0) {
         srs_warn("getrusage failed, ignore");
         return;
     }
-#else
-	_srs_system_rusage.m_usage_time =  ((double) clock())/CLOCKS_PER_SEC;
-#endif
         
     srs_update_system_time_ms();
     _srs_system_rusage.sample_time = srs_get_system_time_ms();

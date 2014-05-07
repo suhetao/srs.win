@@ -61,7 +61,6 @@ using namespace std;
 // if timeout, close the connection.
 #define SRS_PAUSED_RECV_TIMEOUT_US (int64_t)(30*60*1000*1000LL)
 
-#ifndef WIN32
 SrsRtmpConn::SrsRtmpConn(SrsServer* srs_server, st_netfd_t client_stfd)
     : SrsConnection(srs_server, client_stfd)
 {
@@ -75,21 +74,6 @@ SrsRtmpConn::SrsRtmpConn(SrsServer* srs_server, st_netfd_t client_stfd)
     
     _srs_config->subscribe(this);
 }
-#else
-SrsRtmpConn::SrsRtmpConn(SrsServer* srs_server, SOCKET clientfd)
-: SrsConnection(srs_server, clientfd)
-{
-	req = new SrsRequest();
-	res = new SrsResponse();
-	skt = new SrsSocket(clientfd);
-	rtmp = new SrsRtmpServer(skt);
-	refer = new SrsRefer();
-	bandwidth = new SrsBandwidth();
-	duration = 0;
-
-	_srs_config->subscribe(this);
-}
-#endif
 
 SrsRtmpConn::~SrsRtmpConn()
 {
@@ -114,8 +98,7 @@ int SrsRtmpConn::do_cycle()
         srs_error("get peer ip failed. ret=%d", ret);
         return ret;
     }
-    srs_trace("rtmp get peer ip success. ip=%s, send_to=%"PRId64"us, recv_to=%"PRId64"us", 
-        ip, SRS_SEND_TIMEOUT_US, SRS_RECV_TIMEOUT_US);
+    srs_trace("serve client, peer ip=%s", ip);
 
     rtmp->set_recv_timeout(SRS_RECV_TIMEOUT_US);
     rtmp->set_send_timeout(SRS_SEND_TIMEOUT_US);
@@ -179,11 +162,8 @@ int SrsRtmpConn::on_reload_vhost_removed(string vhost)
     // if the vhost connected is removed, disconnect the client.
     srs_trace("vhost %s removed/disabled, close client url=%s", 
         vhost.c_str(), req->get_stream_url().c_str());
-#ifndef WIN32
+        
     srs_close_stfd(stfd);
-#else
-	closesocket(fd);
-#endif
     
     return ret;
 }
@@ -206,11 +186,7 @@ int SrsRtmpConn::service_cycle()
 
     // do bandwidth test if connect to the vhost which is for bandwidth check.
     if (_srs_config->get_bw_check_enabled(req->vhost)) {
-#ifndef WIN32
         return bandwidth->bandwidth_test(req, stfd, rtmp);
-#else
-		return bandwidth->bandwidth_test(req, fd, rtmp);
-#endif
     }
     
     if ((ret = rtmp->response_connect_app(req)) != ERROR_SUCCESS) {
@@ -312,11 +288,7 @@ int SrsRtmpConn::stream_service_cycle()
             srs_warn("stream %s is already publishing. ret=%d", 
                 req->get_stream_url().c_str(), ret);
             // to delay request
-#ifndef WIN32
-			st_usleep(SRS_STREAM_BUSY_SLEEP_US);
-#else
-			usleep(SRS_STREAM_BUSY_SLEEP_US);
-#endif
+            st_usleep(SRS_STREAM_BUSY_SLEEP_US);
             return ret;
         }
     }
@@ -494,19 +466,14 @@ int SrsRtmpConn::playing(SrsSource* source)
     int64_t starttime = -1;
     while (true) {
         // switch to other st-threads.
-#ifndef WIN32
-		st_usleep(0);
-#else
-		usleep(0);
-#endif
+        st_usleep(0);
         
         pithy_print.elapse();
 
         // read from client.
-        int ctl_msg_ret = ERROR_SUCCESS;
         if (true) {
             SrsMessage* msg = NULL;
-            ctl_msg_ret = ret = rtmp->recv_message(&msg);
+            ret = rtmp->recv_message(&msg);
             
             srs_verbose("play loop recv message. ret=%d", ret);
             if (ret != ERROR_SUCCESS && ret != ERROR_SOCKET_TIMEOUT) {
@@ -534,8 +501,8 @@ int SrsRtmpConn::playing(SrsSource* source)
         // reportable
         if (pithy_print.can_print()) {
             srs_trace("-> "SRS_LOG_ID_PLAY
-                " time=%"PRId64", duration=%"PRId64", cmr=%d, msgs=%d, obytes=%"PRId64", ibytes=%"PRId64", okbps=%d, ikbps=%d", 
-                pithy_print.age(), duration, ctl_msg_ret, count, rtmp->get_send_bytes(), rtmp->get_recv_bytes(), 
+                " time=%"PRId64", duration=%"PRId64", msgs=%d, obytes=%"PRId64", ibytes=%"PRId64", okbps=%d, ikbps=%d", 
+                pithy_print.age(), duration, count, rtmp->get_send_bytes(), rtmp->get_recv_bytes(), 
                 rtmp->get_send_kbps(), rtmp->get_recv_kbps());
         }
         
@@ -604,11 +571,7 @@ int SrsRtmpConn::fmle_publish(SrsSource* source)
     
     while (true) {
         // switch to other st-threads.
-#ifndef WIN32
-		st_usleep(0);
-#else
-		usleep(0);
-#endif
+        st_usleep(0);
         
         SrsMessage* msg = NULL;
         if ((ret = rtmp->recv_message(&msg)) != ERROR_SUCCESS) {
@@ -683,11 +646,7 @@ int SrsRtmpConn::flash_publish(SrsSource* source)
     
     while (true) {
         // switch to other st-threads.
-#ifndef WIN32
-		st_usleep(0);
-#else
-		usleep(0);
-#endif
+        st_usleep(0);
         
         SrsMessage* msg = NULL;
         if ((ret = rtmp->recv_message(&msg)) != ERROR_SUCCESS) {

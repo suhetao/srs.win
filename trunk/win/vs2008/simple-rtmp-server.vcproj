@@ -18,8 +18,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)build\$(ConfigurationName)"
-			IntermediateDirectory="build\$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)build\srs\$(ConfigurationName)"
+			IntermediateDirectory="build\srs\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="2"
 			>
@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\inc;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
+				AdditionalIncludeDirectories="..\inc;..\lib;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -61,7 +61,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ws2_32.lib"
+				AdditionalDependencies="ws2_32.lib ..\..\lib\st.lib"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -91,8 +91,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)build\$(ConfigurationName)"
-			IntermediateDirectory="$(SolutionDir)build\$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)build\srs\$(ConfigurationName)"
+			IntermediateDirectory="$(SolutionDir)build\srs\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -116,7 +116,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="..\inc;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
+				AdditionalIncludeDirectories="..\inc;..\lib;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -135,7 +135,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ws2_32.lib"
+				AdditionalDependencies="ws2_32.lib ..\..\lib\st.lib"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -226,14 +226,6 @@
 			</File>
 			<File
 				RelativePath="..\..\src\app\srs_app_encoder.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\app\srs_app_ffmpeg.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\app\srs_app_ffmpeg.hpp"
 				>
 			</File>
 			<File
@@ -365,6 +357,22 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\app\srs_app_st.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\app\srs_app_st.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\app\srs_app_thread.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\app\srs_app_thread.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\app\srs_app_utility.cpp"
 				>
 			</File>
@@ -453,7 +461,7 @@
 			Name="main"
 			>
 			<File
-				RelativePath="..\..\src\main\srs_main_server.cpp"
+				RelativePath="..\src\Srs_main_server_win32.cpp"
 				>
 			</File>
 		</Filter>
@@ -512,33 +520,21 @@
 		<Filter
 			Name="win32"
 			>
-			<File
-				RelativePath="..\src\srs_app_thread_win32.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\src\srs_app_thread_win32.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\src\srs_app_win32.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\src\srs_app_win32.hpp"
-				>
-			</File>
 		</Filter>
 		<File
 			RelativePath="..\src\fcntl.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\fork.cpp"
+			RelativePath="..\src\resource.c"
 			>
 		</File>
 		<File
-			RelativePath="..\src\gettimeofday.cpp"
+			RelativePath="..\src\time.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\uio.cpp"
 			>
 		</File>
 		<File

@@ -30,11 +30,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <srs_core.hpp>
 
-#ifndef WIN32
 #include <srs_app_st.hpp>
-#else
-#include <srs_app_win32.hpp>
-#endif
 #include <srs_kernel_log.hpp>
 #include <srs_app_reload.hpp>
 
@@ -50,11 +46,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 class SrsThreadContext : public ISrsThreadContext
 {
 private:
-#ifndef WIN32
     std::map<st_thread_t, int> cache;
-#else
-	std::map<HANDLE, int> cache;
-#endif
 public:
     SrsThreadContext();
     virtual ~SrsThreadContext();

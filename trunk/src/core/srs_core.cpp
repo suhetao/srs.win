@@ -24,13 +24,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <srs_core.hpp>
 
 #include <string.h>
-#ifndef WIN32
 #include <netdb.h>
 #include <arpa/inet.h>
-#else
-#include <WS2tcpip.h>
-#include <WinSock2.h>
-#endif
 
 using namespace std;
 

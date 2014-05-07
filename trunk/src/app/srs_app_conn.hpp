@@ -29,13 +29,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include <srs_core.hpp>
-#ifndef WIN32
+
 #include <srs_app_st.hpp>
 #include <srs_app_thread.hpp>
-#else
-#include <srs_app_win32.hpp>
-#include <srs_app_thread_win32.hpp>
-#endif
 
 class SrsServer;
 class SrsConnection : public ISrsThreadHandler
@@ -45,18 +41,10 @@ private:
 protected:
     char* ip;
     SrsServer* server;
-#ifndef WIN32
     st_netfd_t stfd;
-#else
-	SOCKET fd;
-#endif
     int connection_id;
 public:
-#ifndef WIN32
     SrsConnection(SrsServer* srs_server, st_netfd_t client_stfd);
-#else
-	SrsConnection(SrsServer* srs_server, SOCKET client_fd);
-#endif
     virtual ~SrsConnection();
 public:
     virtual int start();

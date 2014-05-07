@@ -23,18 +23,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <srs_app_conn.hpp>
 
-#ifndef WIN32
 #include <arpa/inet.h>
-#else
-#include <WS2tcpip.h>
-#include <WinSock2.h>
-#endif
 
 #include <srs_kernel_log.hpp>
 #include <srs_kernel_error.hpp>
 #include <srs_app_server.hpp>
 
-#ifndef WIN32
 SrsConnection::SrsConnection(SrsServer* srs_server, st_netfd_t client_stfd)
 {
     ip = NULL;
@@ -43,16 +37,6 @@ SrsConnection::SrsConnection(SrsServer* srs_server, st_netfd_t client_stfd)
     connection_id = 0;
     pthread = new SrsThread(this, 0);
 }
-#else
-SrsConnection::SrsConnection(SrsServer* srs_server, SOCKET client_fd)
-{
-	ip = NULL;
-	server = srs_server;
-	fd = client_fd;
-	connection_id = 0;
-	pthread = new SrsThread(this, 0);
-}
-#endif
 
 SrsConnection::~SrsConnection()
 {
@@ -101,11 +85,7 @@ void SrsConnection::on_thread_stop()
 
 void SrsConnection::stop()
 {
-#ifndef WIN32
     srs_close_stfd(stfd);
-#else
-	closesocket(fd);
-#endif
     srs_freep(pthread);
     srs_freepa(ip);
 }
@@ -114,10 +94,7 @@ int SrsConnection::get_peer_ip()
 {
     int ret = ERROR_SUCCESS;
     
-#ifndef WIN32
     int fd = st_netfd_fileno(stfd);
-#else
-#endif
     
     // discovery client information
     sockaddr_in addr;

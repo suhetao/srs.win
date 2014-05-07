@@ -223,14 +223,8 @@ private:
 /**
 * 4.1. Message Header
 */
-#ifndef WIN32
 struct SrsMessageHeader
 {
-#else
-class SrsMessageHeader
-{
-public:
-#endif
     /**
     * One byte field to represent the message type. A range of type IDs
     * (1-7) are reserved for protocol control messages.

@@ -37,11 +37,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <http_parser.h>
 
-#ifndef WIN32
 #include <srs_app_st.hpp>
-#else
-#include <srs_app_win32.hpp>
-#endif
 
 class SrsBuffer;
 class SrsRequest;

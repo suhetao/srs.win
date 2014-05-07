@@ -30,10 +30,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <srs_core.hpp>
 
-#ifndef WIN32
 #include <sys/resource.h>
-#else
-#endif
 
 // get current system time in ms, use cache to avoid performance problem
 extern int64_t srs_get_system_time_ms();
@@ -48,11 +45,7 @@ struct SrsRusage
     // the time in ms when sample.
     int64_t sample_time;
     
-#ifndef WIN32
     rusage r;
-#else
-	double m_usage_time;
-#endif
     
     SrsRusage();
 };

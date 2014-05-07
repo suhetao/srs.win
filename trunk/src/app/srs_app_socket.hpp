@@ -30,11 +30,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <srs_core.hpp>
 
-#ifndef WIN32
 #include <srs_app_st.hpp>
-#else
-#include <srs_app_win32.hpp>
-#endif
 #include <srs_protocol_io.hpp>
 
 /**
@@ -49,17 +45,9 @@ private:
     int64_t recv_bytes;
     int64_t send_bytes;
     int64_t start_time_ms;
-#ifndef WIN32
     st_netfd_t stfd;
-#else
-	SOCKET socketfd;
-#endif
 public:
-#ifndef WIN32
     SrsSocket(st_netfd_t client_stfd);
-#else
-	SrsSocket(SOCKET client_fd);
-#endif
     virtual ~SrsSocket();
 public:
     virtual bool is_never_timeout(int64_t timeout_us);

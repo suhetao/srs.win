@@ -27,19 +27,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <unistd.h>
 #include <sys/types.h>
-#ifndef WIN32
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#else
-#include <WS2tcpip.h>
-#include <WinSock2.h>
-#endif
 #include <errno.h>
-#ifndef WIN32
 #include <sys/uio.h>
-#else
-#endif
 
 #include <srs_kernel_utility.hpp>
 
@@ -92,11 +84,9 @@ int SimpleSocketStream::connect(const char* server_ip, int port)
 int SimpleSocketStream::read(const void* buf, size_t size, ssize_t* nread)
 {
     int ret = ERROR_SUCCESS;
-#ifndef WIN32    
-    *nread = ::recv(fd, (void*)buf, size, 0);
-#else
+    
+    //*nread = ::recv(fd, (void*)buf, size, 0);
 	*nread = ::recv(fd, (char*)buf, size, 0);
-#endif
     
     // On success a non-negative integer indicating the number of bytes actually read is returned 
     // (a value of 0 means the network connection is closed or end of file is reached).
@@ -226,11 +216,8 @@ int SimpleSocketStream::write(const void* buf, size_t size, ssize_t* nwrite)
 {
     int ret = ERROR_SUCCESS;
     
-#ifndef WIN32
-    *nwrite = ::send(fd, (void*)buf, size, 0);
-#else
+    //*nwrite = ::send(fd, (void*)buf, size, 0);
 	*nwrite = ::send(fd, (char*)buf, size, 0);
-#endif
     
     if (*nwrite <= 0) {
         if (errno == ETIME) {

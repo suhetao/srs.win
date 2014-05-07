@@ -30,10 +30,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <srs_core.hpp>
 
-#ifndef WIN32
 #include <sys/uio.h>
-#else
-#endif
 
 #include <srs_kernel_buffer.hpp>
 

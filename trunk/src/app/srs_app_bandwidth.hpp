@@ -29,11 +29,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 #include <srs_core.hpp>
 
-#ifndef WIN32
 #include <srs_app_st.hpp>
-#else
-#include <srs_app_win32.hpp>
-#endif
 
 class SrsRequest;
 class SrsRtmpServer;
@@ -86,15 +82,9 @@ public:
     /**
     * do the bandwidth test.
     */
-#ifndef WIN32
     virtual int bandwidth_test(SrsRequest* _req, st_netfd_t stfd, SrsRtmpServer* _rtmp);
 private:
     virtual int get_local_ip(st_netfd_t stfd, char *&local_ip);
-#else
-	virtual int bandwidth_test(SrsRequest* _req, SOCKET fd, SrsRtmpServer* _rtmp);
-private:
-	virtual int get_local_ip(SOCKET fd, char *&local_ip);
-#endif
     /**
     * used to process band width check from client.
     */

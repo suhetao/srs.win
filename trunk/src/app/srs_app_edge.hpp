@@ -30,13 +30,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <srs_core.hpp>
 
-#ifndef WIN32
 #include <srs_app_st.hpp>
 #include <srs_app_thread.hpp>
-#else
-#include <srs_app_win32.hpp>
-#include <srs_app_thread_win32.hpp>
-#endif
 
 class SrsSocket;
 class SrsRtmpServer;
@@ -86,11 +81,7 @@ private:
     SrsPlayEdge* _edge;
     SrsRequest* _req;
     SrsThread* pthread;
-#ifndef WIN32
     st_netfd_t stfd;
-#else
-	SOCKET fd;
-#endif
     ISrsProtocolReaderWriter* io;
     SrsRtmpClient* client;
     int origin_index;
@@ -123,11 +114,7 @@ private:
     SrsPublishEdge* _edge;
     SrsRequest* _req;
     SrsThread* pthread;
-#ifndef WIN32
     st_netfd_t stfd;
-#else
-	SOCKET fd;
-#endif
     ISrsProtocolReaderWriter* io;
     SrsRtmpClient* client;
     int origin_index;

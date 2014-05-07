@@ -25,10 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <stdlib.h>
 #include <unistd.h>
-#ifndef WIN32
 #include <sys/wait.h>
-#else
-#endif
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/types.h>
