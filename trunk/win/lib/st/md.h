@@ -226,7 +226,8 @@ int _st_GetError(int err);
 #define POLLERR 8
 #define POLLNVAL 20
 
-#define MD_STACK_GROWS_DOWN
+//#define MD_STACK_GROWS_DOWN
+#define MD_STACK_GROWS_UP
 #define MD_USE_BSD_ANON_MMAP
 #define MD_ACCEPT_NB_NOT_INHERITED
 #define MD_ALWAYS_UNSERIALIZED_ACCEPT

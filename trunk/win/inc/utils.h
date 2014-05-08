@@ -1,6 +1,57 @@
 #ifndef _UTILS_H_
 #define _UTILS_H_
 
+#include <io.h>
+#include <time.h>
+
+#define lseek _lseek
+#define close _close
+#define open _open
+#define read _read
+#define write _write
+
+#if !defined(snprintf)
+#define snprintf  _snprintf
+#define PRId8     "hhd"
+#define PRId16    "hd"
+#define PRId32    "ld"
+#define PRId64    "lld"
+#endif
+
+#define S_IFLNK    0120000 /* Symbolic link */
+#define S_ISLNK(x) (((x) & S_IFMT) == S_IFLNK)
+#define S_ISSOCK(x) 0
+#define S_IRGRP 0
+#define S_IWGRP 0
+#define S_IXGRP 0
+#define S_ISGID 0
+#define S_IROTH 0
+#define S_IXOTH 0
+#define S_IRUSR 0
+#define S_IWUSR 0
+
+#define SIGHUP 1
+#define SIGQUIT 3
+#define SIGKILL 9
+#define SIGPIPE 13
+#define SIGALRM 14
+#define SIGCHLD 17
+
+#define SIGUSR2	300
+
+#define	_SC_NPROCESSORS_CONF		57
+#define	_SC_NPROCESSORS_ONLN		58
+
+#ifndef ST_UTIME_NO_TIMEOUT
+#define ST_UTIME_NO_TIMEOUT -1
+#endif
+
+#define ECONNRESET            232
+#define ETIMEDOUT             238
+#ifndef ETIME
+#define ETIME ETIMEDOUT
+#endif
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -10,6 +61,9 @@ extern "C"
 
 int internal_errno_from_Win32(unsigned long w32Err);
 void* internal_Windows_HANDLE_from_file_handle(int fd);
+
+void initsocket(void);
+long sysconf(int name);
 
 #ifdef __cplusplus
 }

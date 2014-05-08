@@ -261,7 +261,6 @@ int SrsBandwidth::check_play(
     // send play data to client
     int64_t current_time = srs_get_system_time_ms();
     int size = 1024; // TODO: FIXME: magic number
-	//modified by hetao.su
     //char random_data[size];
 	char random_data[1024];
     memset(random_data, 'A', size);

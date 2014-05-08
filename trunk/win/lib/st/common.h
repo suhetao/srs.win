@@ -162,37 +162,35 @@ typedef struct _st_cond {
   _st_clist_t wait_q;	      /* Condition variable wait queue */
 } _st_cond_t;
 
-
 typedef struct _st_thread _st_thread_t;
 
 struct _st_thread {
-  int state;                  /* Thread's state */
-  int flags;                  /* Thread's flags */
+	int state;                  /* Thread's state */
+	int flags;                  /* Thread's flags */
 
-  void *(*start)(void *arg);  /* The start function of the thread */
-  void *arg;                  /* Argument of the start function */
-  void *retval;               /* Return value of the start function */
+	void *(*start)(void *arg);  /* The start function of the thread */
+	void *arg;                  /* Argument of the start function */
+	void *retval;               /* Return value of the start function */
 
-  _st_stack_t *stack;	      /* Info about thread's stack */
+	_st_stack_t *stack;	      /* Info about thread's stack */
 
-  _st_clist_t links;          /* For putting on run/sleep/zombie queue */
-  _st_clist_t wait_links;     /* For putting on mutex/condvar wait queue */
+	_st_clist_t links;          /* For putting on run/sleep/zombie queue */
+	_st_clist_t wait_links;     /* For putting on mutex/condvar wait queue */
 #ifdef DEBUG
-  _st_clist_t tlink;          /* For putting on thread queue */
+	_st_clist_t tlink;          /* For putting on thread queue */
 #endif
 
-  st_utime_t due;             /* Wakeup time when thread is sleeping */
-  _st_thread_t *left;         /* For putting in timeout heap */
-  _st_thread_t *right;	      /* -- see docs/timeout_heap.txt for details */
-  int heap_index;
+	st_utime_t due;             /* Wakeup time when thread is sleeping */
+	_st_thread_t *left;         /* For putting in timeout heap */
+	_st_thread_t *right;	      /* -- see docs/timeout_heap.txt for details */
+	int heap_index;
 
-  void **private_data;        /* Per thread private data */
+	void **private_data;        /* Per thread private data */
 
-  _st_cond_t *term;           /* Termination condition variable for join */
+	_st_cond_t *term;           /* Termination condition variable for join */
 
-  jmp_buf context;            /* Thread's context */
+	jmp_buf context;            /* Thread's context */
 };
-
 
 typedef struct _st_mutex {
   _st_thread_t *owner;        /* Current mutex owner */

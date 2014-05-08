@@ -1,4 +1,5 @@
-#include <windows.h>
+#include "unistd.h"
+#include <Windows.h>
 
 void usleep(long usec)
 {

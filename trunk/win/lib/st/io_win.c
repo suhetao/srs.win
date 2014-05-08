@@ -222,7 +222,7 @@ static _st_netfd_t *_st_netfd_new(int osfd, int nonblock, int is_socket)
 		fd = _st_netfd_freelist;
 		_st_netfd_freelist = _st_netfd_freelist->next;
 	} else {
-		fd = calloc(1, sizeof(_st_netfd_t));
+		fd = (st_netfd_t)calloc(1, sizeof(_st_netfd_t));
 		if (!fd)
 			return NULL;
 	}
@@ -232,7 +232,7 @@ static _st_netfd_t *_st_netfd_new(int osfd, int nonblock, int is_socket)
 	fd->next = NULL;
 
 	if(is_socket == FALSE) return(fd);
-	if(nonblock) ioctlsocket(fds[fd->osfd], FIONBIO, &flags);
+	if(nonblock) ioctlsocket(fds[fd->osfd], FIONBIO, (u_long*)&flags);
 
 	return fd;
 }
@@ -383,7 +383,7 @@ APIEXPORT ssize_t st_read(_st_netfd_t *fd, void *buf, size_t nbyte, st_utime_t t
 {
 	ssize_t n;
 
-	while((n = recv(fds[fd->osfd], buf, nbyte,0)) < 0)
+	while((n = recv(fds[fd->osfd], (char*)buf, nbyte,0)) < 0)
 	{
 		errno=_st_GetError(0);
 		if(errno == EINTR) continue;
@@ -402,7 +402,7 @@ APIEXPORT ssize_t st_read_fully(_st_netfd_t *fd, void *buf, size_t nbyte,
 	size_t nleft = nbyte;
 
 	while (nleft > 0) {
-		if ((n = recv(fds[fd->osfd], buf, nleft,0)) < 0) {
+		if ((n = recv(fds[fd->osfd], (char*)buf, nleft,0)) < 0) {
 			errno=_st_GetError(0);
 			if (errno == EINTR)
 				continue;
@@ -430,7 +430,7 @@ APIEXPORT ssize_t st_write(_st_netfd_t *fd, const void *buf, size_t nbyte,
 	ssize_t nleft = nbyte;
 
 	while (nleft > 0) {
-		if ((n = send(fds[fd->osfd], buf, nleft,0)) < 0) {
+		if ((n = send(fds[fd->osfd], (char*)buf, nleft,0)) < 0) {
 			errno=_st_GetError(0);
 			if (errno == EINTR)
 				continue;
@@ -467,7 +467,7 @@ APIEXPORT int st_recvfrom(_st_netfd_t *fd, void *buf, int len, struct sockaddr *
 {
 	int n;
 
-	while ((n = recvfrom(fds[fd->osfd], buf, len, 0, from, (socklen_t *)fromlen))
+	while ((n = recvfrom(fds[fd->osfd], (char*)buf, len, 0, from, (socklen_t *)fromlen))
 		< 0) {
 			errno=_st_GetError(0);
 			if (errno == EINTR)
@@ -488,7 +488,7 @@ APIEXPORT int st_sendto(_st_netfd_t *fd, const void *msg, int len, const struct 
 {
 	int n;
 
-	while ((n = sendto(fds[fd->osfd], msg, len, 0, to, tolen)) < 0) {
+	while ((n = sendto(fds[fd->osfd], (char*)msg, len, 0, to, tolen)) < 0) {
 		errno=_st_GetError(0);
 		if (errno == EINTR)
 			continue;

@@ -3,7 +3,6 @@
 #include <limits.h>
 #include <windows.h>
 #include <utils.h>
-#include <io.h>
 
 #if !defined(ECURDIR)
 #define ECURDIR        EACCES

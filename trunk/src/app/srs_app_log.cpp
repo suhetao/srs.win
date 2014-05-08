@@ -255,14 +255,17 @@ bool SrsFastLog::generate_header(bool error, const char* tag, int context_id, co
     
     // to calendar time
     struct tm* tm;
-    //if ((tm = localtime(&tv.tv_sec)) == NULL) {
-	//	return false;
-    //}
+#ifndef WIN32
+	if ((tm = localtime(&tv.tv_sec)) == NULL) {
+		return false;
+	}
+#else
 	time_t timep;
 	::time(&timep);
 	if ((tm = localtime(&timep)) == NULL) {
 		return false;
 	}
+#endif
     
     // write log header
     int log_header_size = -1;
