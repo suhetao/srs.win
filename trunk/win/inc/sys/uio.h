@@ -14,7 +14,7 @@ struct iovec
 	size_t  iov_len;    /*!< Number of bytes referenced */
 };
 
-typedef struct iovec iovec;
+//typedef struct iovec iovec;
 typedef int ssize_t;
 
 ssize_t readv(int fd,struct iovec const*  vector, int count);

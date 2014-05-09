@@ -1,4 +1,5 @@
 #include <srs_core.hpp>
+
 #include <stdlib.h>
 #include <sys/types.h>
 
@@ -70,7 +71,7 @@ int main(int argc, char** argv)
 	srs_trace("configure: "SRS_AUTO_USER_CONFIGURE);
 	srs_trace("features: "SRS_AUTO_CONFIGURE);
 #ifdef SRS_AUTO_ARM_UBUNTU12
-	srs_trace("arm tool chain: "SRS_AUTO_ARM_TOOL_CHAIN);
+	srs_trace("arm tool chain: "SRS_AUTO_EMBEDED_TOOL_CHAIN);
 #endif
 
 	if ((ret = _srs_server->initialize()) != ERROR_SUCCESS) {

@@ -8,6 +8,14 @@
 #define getpid _getpid
 #define getcwd _getcwd
 
-void usleep(long usec);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void usleep(long long usec);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _UNISTD_H */

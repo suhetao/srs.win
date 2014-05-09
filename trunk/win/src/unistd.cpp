@@ -1,7 +1,7 @@
 #include "unistd.h"
 #include <Windows.h>
 
-void usleep(long usec)
+void usleep(long long usec)
 {
 	LARGE_INTEGER lFrequency;
 	LARGE_INTEGER lEndTime;

@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\inc;..\lib\st;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
+				AdditionalIncludeDirectories="..\inc;..\lib\myst;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="false"
 				ExceptionHandling="1"
@@ -62,7 +62,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ws2_32.lib ..\..\lib\st.lib"
+				AdditionalDependencies="ws2_32.lib"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -117,7 +117,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="..\inc;..\lib\st;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
+				AdditionalIncludeDirectories="..\inc;..\lib\myst;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -136,7 +136,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ws2_32.lib ..\..\lib\st.lib"
+				AdditionalDependencies="ws2_32.lib"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -227,6 +227,14 @@
 			</File>
 			<File
 				RelativePath="..\..\src\app\srs_app_encoder.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\app\srs_app_ffmpeg.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\app\srs_app_ffmpeg.hpp"
 				>
 			</File>
 			<File
@@ -447,18 +455,6 @@
 			</File>
 		</Filter>
 		<Filter
-			Name="libs"
-			>
-			<File
-				RelativePath="..\..\src\libs\srs_lib_simple_socket.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\libs\srs_lib_simple_socket.hpp"
-				>
-			</File>
-		</Filter>
-		<Filter
 			Name="main"
 			>
 			<File
@@ -521,6 +517,34 @@
 		<Filter
 			Name="win32"
 			>
+			<Filter
+				Name="lib"
+				>
+				<Filter
+					Name="myst"
+					>
+					<File
+						RelativePath="..\lib\myst\myst.c"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\myst\neterr.h"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\myst\st.h"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\myst\Thread.c"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\myst\Thread.h"
+						>
+					</File>
+				</Filter>
+			</Filter>
 		</Filter>
 		<File
 			RelativePath="..\src\fcntl.cpp"

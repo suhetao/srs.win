@@ -71,6 +71,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //      SRS_SYS_CYCLE_INTERVAL * SRS_SYS_MEMINFO_RESOLUTION_TIMES
 #define SRS_SYS_MEMINFO_RESOLUTION_TIMES 60
 
+// update platform info interval:
+//      SRS_SYS_CYCLE_INTERVAL * SRS_SYS_PLATFORM_INFO_RESOLUTION_TIMES
+#define SRS_SYS_PLATFORM_INFO_RESOLUTION_TIMES 80
+
 SrsListener::SrsListener(SrsServer* server, SrsListenerType type)
 {
     fd = -1;
@@ -259,7 +263,7 @@ int SrsSignalManager::start()
     sigaction(SIGUSR2, &sa, NULL);
     
     srs_trace("signal installed");
-#endif
+#endif    
     return pthread->start();
 }
 
@@ -416,9 +420,9 @@ int SrsServer::initialize_signal()
 int SrsServer::acquire_pid_file()
 {
     int ret = ERROR_SUCCESS;
-    
-#ifndef WIN32
+#ifndef WIN32    
     std::string pid_file = _srs_config->get_pid_file();
+    
     // -rw-r--r-- 
     // 644
     int mode = S_IRUSR | S_IWUSR |  S_IRGRP | S_IROTH;
@@ -485,7 +489,7 @@ int SrsServer::acquire_pid_file()
     
     srs_trace("write pid=%d to %s success!", pid, pid_file.c_str());
     pid_fd = fd;
-#endif    
+#endif  
     return ret;
 }
 
@@ -624,6 +628,7 @@ int SrsServer::do_cycle()
     max = srs_max(max, SRS_SYS_RUSAGE_RESOLUTION_TIMES);
     max = srs_max(max, SRS_SYS_CPU_STAT_RESOLUTION_TIMES);
     max = srs_max(max, SRS_SYS_MEMINFO_RESOLUTION_TIMES);
+    max = srs_max(max, SRS_SYS_PLATFORM_INFO_RESOLUTION_TIMES);
     
     // the deamon thread, update the time cache
     while (true) {
@@ -665,6 +670,9 @@ int SrsServer::do_cycle()
             }
             if ((i % SRS_SYS_MEMINFO_RESOLUTION_TIMES) == 0) {
                 srs_update_meminfo();
+            }
+            if ((i % SRS_SYS_PLATFORM_INFO_RESOLUTION_TIMES) == 0) {
+                srs_update_platform_info();
             }
         }
     }

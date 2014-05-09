@@ -214,6 +214,15 @@ int SrsEdgeIngester::process_publish_message(SrsMessage* msg)
             return ret;
         }
     }
+    
+    // process aggregate packet
+    if (msg->header.is_aggregate()) {
+        if ((ret = source->on_aggregate(msg)) != ERROR_SUCCESS) {
+            srs_error("source process aggregate message failed. ret=%d", ret);
+            return ret;
+        }
+        return ret;
+    }
 
     // process onMetaData
     if (msg->header.is_amf0_data() || msg->header.is_amf3_data()) {
@@ -308,8 +317,7 @@ int SrsEdgeIngester::connect_server()
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = inet_addr(ip.c_str());
     
-    //if (st_connect(stfd, (const struct sockaddr*)&addr, sizeof(sockaddr_in), ST_UTIME_NO_TIMEOUT) == -1){
-	if (st_connect(stfd, (struct sockaddr*)&addr, sizeof(sockaddr_in), ST_UTIME_NO_TIMEOUT) == -1){
+    if (st_connect(stfd, (const struct sockaddr*)&addr, sizeof(sockaddr_in), ST_UTIME_NO_TIMEOUT) == -1){
         ret = ERROR_ST_CONNECT;
         srs_error("connect to server error. ip=%s, port=%d, ret=%d", ip.c_str(), port, ret);
         return ret;
@@ -582,8 +590,7 @@ int SrsEdgeForwarder::connect_server()
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = inet_addr(ip.c_str());
     
-	//if (st_connect(stfd, (const struct sockaddr*)&addr, sizeof(sockaddr_in), ST_UTIME_NO_TIMEOUT) == -1){
-	if (st_connect(stfd, (struct sockaddr*)&addr, sizeof(sockaddr_in), ST_UTIME_NO_TIMEOUT) == -1){
+    if (st_connect(stfd, (const struct sockaddr*)&addr, sizeof(sockaddr_in), ST_UTIME_NO_TIMEOUT) == -1){
         ret = ERROR_ST_CONNECT;
         srs_error("connect to server error. ip=%s, port=%d, ret=%d", ip.c_str(), port, ret);
         return ret;
