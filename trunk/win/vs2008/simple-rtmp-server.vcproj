@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\inc;..\lib\myst;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
+				AdditionalIncludeDirectories="..\inc;..\lib;..\lib\stl;..\lib\myst;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="false"
 				ExceptionHandling="1"
@@ -548,6 +548,14 @@
 			<Filter
 				Name="lib"
 				>
+				<File
+					RelativePath="..\lib\Util.c"
+					>
+				</File>
+				<File
+					RelativePath="..\lib\Util.h"
+					>
+				</File>
 				<Filter
 					Name="myst"
 					>
@@ -569,6 +577,34 @@
 					</File>
 					<File
 						RelativePath="..\lib\myst\Thread.h"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="stl"
+					>
+					<File
+						RelativePath="..\lib\stl\List.c"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\stl\List.h"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\stl\Map.c"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\stl\Map.h"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\stl\Vector.c"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\stl\Vector.h"
 						>
 					</File>
 				</Filter>
