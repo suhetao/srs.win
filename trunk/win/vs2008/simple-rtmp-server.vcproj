@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\inc;..\lib;..\lib\stl;..\lib\myst;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
+				AdditionalIncludeDirectories="..\inc;..\lib;..\lib\IOCP;..\lib\stl;..\lib\myst;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="false"
 				ExceptionHandling="1"
@@ -605,6 +605,42 @@
 					</File>
 					<File
 						RelativePath="..\lib\stl\Vector.h"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="IOCP"
+					>
+					<File
+						RelativePath="..\lib\IOCP\IOCP.c"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\IOCP\IOCP.h"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\IOCP\Lock.c"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\IOCP\Lock.h"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\IOCP\LockPool.c"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\IOCP\LockPool.h"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\IOCP\SocketPool.c"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\IOCP\SocketPool.h"
 						>
 					</File>
 				</Filter>
