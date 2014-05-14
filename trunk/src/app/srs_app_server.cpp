@@ -226,7 +226,7 @@ int SrsSignalManager::initialize()
 int SrsSignalManager::start()
 {
     int ret = ERROR_SUCCESS;
-#ifndef WIN32  
+#ifndef WIN32    
     /**
     * Note that if multiple processes are used (see below), 
     * the signal pipe should be initialized after the fork(2) call 
@@ -263,7 +263,7 @@ int SrsSignalManager::start()
     sigaction(SIGUSR2, &sa, NULL);
     
     srs_trace("signal installed");
-#endif    
+#endif
     return pthread->start();
 }
 
@@ -564,12 +564,15 @@ int SrsServer::cycle()
 
     ret = do_cycle();
 
+#ifdef SRS_AUTO_GPERF_MC
     destroy();
     
-#ifdef SRS_AUTO_GPERF_MC
     srs_warn("sleep a long time for system st-threads to cleanup.");
     st_usleep(3 * 1000 * 1000);
     srs_warn("system quit");
+#else
+    srs_warn("main cycle terminated, system quit normally.");
+    exit(0);
 #endif
     
     return ret;

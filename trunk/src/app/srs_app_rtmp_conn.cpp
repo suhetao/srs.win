@@ -43,6 +43,7 @@ using namespace std;
 #include <srs_app_socket.hpp>
 #include <srs_app_http_hooks.hpp>
 #include <srs_app_edge.hpp>
+#include <srs_app_kbps.hpp>
 
 // when stream is busy, for example, streaming is already
 // publishing, when a new client to request to publish,
@@ -71,6 +72,8 @@ SrsRtmpConn::SrsRtmpConn(SrsServer* srs_server, st_netfd_t client_stfd)
     refer = new SrsRefer();
     bandwidth = new SrsBandwidth();
     duration = 0;
+    kbps = new SrsKbps();
+    kbps->set_io(skt, skt);
     
     _srs_config->subscribe(this);
 }
@@ -87,6 +90,7 @@ SrsRtmpConn::~SrsRtmpConn()
     srs_freep(skt);
     srs_freep(refer);
     srs_freep(bandwidth);
+    srs_freep(kbps);
 }
 
 // TODO: return detail message when error for client.
@@ -456,7 +460,7 @@ int SrsRtmpConn::playing(SrsSource* source)
     }
     
     srs_assert(consumer != NULL);
-    SrsAutoFree(SrsConsumer, consumer, false);
+    SrsAutoFree(SrsConsumer, consumer);
     srs_verbose("consumer created success.");
     
     rtmp->set_recv_timeout(SRS_PULSE_TIMEOUT_US);
@@ -500,19 +504,23 @@ int SrsRtmpConn::playing(SrsSource* source)
 
         // reportable
         if (pithy_print.can_print()) {
+            kbps->sample();
             srs_trace("-> "SRS_LOG_ID_PLAY
-                " time=%"PRId64", duration=%"PRId64", msgs=%d, obytes=%"PRId64", ibytes=%"PRId64", okbps=%d, ikbps=%d", 
-                pithy_print.age(), duration, count, rtmp->get_send_bytes(), rtmp->get_recv_bytes(), 
-                rtmp->get_send_kbps(), rtmp->get_recv_kbps());
+                " time=%"PRId64", msgs=%d, okbps=%d,%d,%d, ikbps=%d,%d,%d", 
+                pithy_print.age(), count,
+                kbps->get_send_kbps(), kbps->get_send_kbps_sample_high(), kbps->get_send_kbps_sample_medium(),
+                kbps->get_recv_kbps(), kbps->get_recv_kbps_sample_high(), kbps->get_recv_kbps_sample_medium());
         }
         
         if (count <= 0) {
             srs_verbose("no packets in queue.");
             continue;
         }
-        SrsAutoFree(SrsSharedPtrMessage*, msgs, true);
+        SrsAutoFreeArray(SrsSharedPtrMessage, msgs, count);
         
         // sendout messages
+        // @remark, becareful, all msgs must be free explicitly,
+        //      free by send_and_free_message or srs_freep.
         for (int i = 0; i < count; i++) {
             SrsSharedPtrMessage* msg = msgs[i];
             
@@ -579,16 +587,17 @@ int SrsRtmpConn::fmle_publish(SrsSource* source)
             return ret;
         }
 
-        SrsAutoFree(SrsMessage, msg, false);
+        SrsAutoFree(SrsMessage, msg);
         
         pithy_print.elapse();
 
         // reportable
         if (pithy_print.can_print()) {
+            kbps->sample();
             srs_trace("<- "SRS_LOG_ID_CLIENT_PUBLISH
-                " time=%"PRId64", obytes=%"PRId64", ibytes=%"PRId64", okbps=%d, ikbps=%d", 
-                pithy_print.age(), rtmp->get_send_bytes(), rtmp->get_recv_bytes(), 
-                rtmp->get_send_kbps(), rtmp->get_recv_kbps());
+                " time=%"PRId64", okbps=%d,%d,%d, ikbps=%d,%d,%d", pithy_print.age(), 
+                kbps->get_send_kbps(), kbps->get_send_kbps_sample_high(), kbps->get_send_kbps_sample_medium(),
+                kbps->get_recv_kbps(), kbps->get_recv_kbps_sample_high(), kbps->get_recv_kbps_sample_medium());
         }
     
         // process UnPublish event.
@@ -599,7 +608,7 @@ int SrsRtmpConn::fmle_publish(SrsSource* source)
                 return ret;
             }
             
-            SrsAutoFree(SrsPacket, pkt, false);
+            SrsAutoFree(SrsPacket, pkt);
         
             if (dynamic_cast<SrsFMLEStartPacket*>(pkt)) {
                 SrsFMLEStartPacket* unpublish = dynamic_cast<SrsFMLEStartPacket*>(pkt);
@@ -656,16 +665,18 @@ int SrsRtmpConn::flash_publish(SrsSource* source)
             return ret;
         }
 
-        SrsAutoFree(SrsMessage, msg, false);
+        SrsAutoFree(SrsMessage, msg);
         
         pithy_print.elapse();
 
         // reportable
         if (pithy_print.can_print()) {
+            kbps->sample();
             srs_trace("<- "SRS_LOG_ID_WEB_PUBLISH
-                " time=%"PRId64", obytes=%"PRId64", ibytes=%"PRId64", okbps=%d, ikbps=%d", 
-                pithy_print.age(), rtmp->get_send_bytes(), rtmp->get_recv_bytes(), 
-                rtmp->get_send_kbps(), rtmp->get_recv_kbps());
+                " time=%"PRId64", okbps=%d,%d,%d, ikbps=%d,%d,%d", 
+                pithy_print.age(),
+                kbps->get_send_kbps(), kbps->get_send_kbps_sample_high(), kbps->get_send_kbps_sample_medium(),
+                kbps->get_recv_kbps(), kbps->get_recv_kbps_sample_high(), kbps->get_recv_kbps_sample_medium());
         }
     
         // process UnPublish event.
@@ -676,7 +687,7 @@ int SrsRtmpConn::flash_publish(SrsSource* source)
                 return ret;
             }
             
-            SrsAutoFree(SrsPacket, pkt, false);
+            SrsAutoFree(SrsPacket, pkt);
             
             // flash unpublish.
             // TODO: maybe need to support republish.
@@ -740,7 +751,7 @@ int SrsRtmpConn::process_publish_message(SrsSource* source, SrsMessage* msg, boo
             srs_error("decode onMetaData message failed. ret=%d", ret);
             return ret;
         }
-        SrsAutoFree(SrsPacket, pkt, false);
+        SrsAutoFree(SrsPacket, pkt);
     
         if (dynamic_cast<SrsOnMetaDataPacket*>(pkt)) {
             SrsOnMetaDataPacket* metadata = dynamic_cast<SrsOnMetaDataPacket*>(pkt);
@@ -767,7 +778,7 @@ int SrsRtmpConn::process_play_control_msg(SrsConsumer* consumer, SrsMessage* msg
         srs_verbose("ignore all empty message.");
         return ret;
     }
-    SrsAutoFree(SrsMessage, msg, false);
+    SrsAutoFree(SrsMessage, msg);
     
     if (!msg->header.is_amf0_command() && !msg->header.is_amf3_command()) {
         srs_info("ignore all message except amf0/amf3 command.");
@@ -781,7 +792,7 @@ int SrsRtmpConn::process_play_control_msg(SrsConsumer* consumer, SrsMessage* msg
     }
     srs_info("decode the amf0/amf3 command packet success.");
     
-    SrsAutoFree(SrsPacket, pkt, false);
+    SrsAutoFree(SrsPacket, pkt);
     
     // for jwplayer/flowplayer, which send close as pause message.
     // @see https://github.com/winlinvip/simple-rtmp-server/issues/6

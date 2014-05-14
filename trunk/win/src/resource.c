@@ -1,12 +1,16 @@
 #include <utils.h>
 #include <sys/resource.h>
-#include <assert.h>
 #include <errno.h>
-#include <windows.h>
 
 int getrusage(int who,struct  rusage*   r_usage)
 {
-    assert(NULL != r_usage);
+	ULARGE_INTEGER  kernelTime;
+	ULARGE_INTEGER  userTime;
+	FILETIME        dummy;
+
+	if(NULL == r_usage){
+		return -1;
+	}
 
     if( RUSAGE_SELF != who)
     {
@@ -16,13 +20,9 @@ int getrusage(int who,struct  rusage*   r_usage)
     }
     else
     {
-        ULARGE_INTEGER  kernelTime;
-        ULARGE_INTEGER  userTime;
-        FILETIME        dummy;
-
-        if(!GetProcessTimes(GetCurrentProcess(), &dummy, &dummy, (LPFILETIME)&kernelTime, (LPFILETIME)&userTime))
+		if(!GetProcessTimes(GetCurrentProcess(), &dummy, &dummy, (LPFILETIME)&kernelTime, (LPFILETIME)&userTime))
         {
-            errno =  internal_errno_from_Win32(GetLastError());
+            errno =  Errno_From_Win32(GetLastError());
             return -1;
         }
         else

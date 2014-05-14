@@ -268,7 +268,7 @@ static ssize_t _st_writev(int fd, struct iovec *iov, unsigned int iov_cnt)
 	}
 	pv = calloc(1, total);
 	if(NULL == pv){
-		errno = internal_errno_from_Win32(GetLastError());
+		errno = Errno_From_Win32(GetLastError());
 		ret = -1;
 	}
 	else
@@ -279,7 +279,7 @@ static ssize_t _st_writev(int fd, struct iovec *iov, unsigned int iov_cnt)
 		}
 
 		if(!send(fd, pv,total,0)){
-			errno = internal_errno_from_Win32(GetLastError());
+			errno = Errno_From_Win32(GetLastError());
 			ret = -1;
 		}
 		else{

@@ -1,5 +1,8 @@
 #ifndef _UTILS_H_
-#define _UTILS_H_
+#define _UTILS_H_Z
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
 #include <io.h>
 #include <time.h>
@@ -59,8 +62,8 @@ extern "C"
 
 #define NUM_ELEMENTS(ar) (sizeof(ar) / sizeof(ar[0]))
 
-int internal_errno_from_Win32(unsigned long w32Err);
-void* internal_Windows_HANDLE_from_file_handle(int fd);
+int Errno_From_Win32(unsigned long w32Err);
+void* Win32_Handle_From_File(int fd);
 
 void initsocket(void);
 long sysconf(int name);

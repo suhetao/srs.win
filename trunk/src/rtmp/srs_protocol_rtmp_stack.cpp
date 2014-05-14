@@ -359,16 +359,6 @@ int64_t SrsProtocol::get_send_bytes()
     return skt->get_send_bytes();
 }
 
-int SrsProtocol::get_recv_kbps()
-{
-    return skt->get_recv_kbps();
-}
-
-int SrsProtocol::get_send_kbps()
-{
-    return skt->get_send_kbps();
-}
-
 int SrsProtocol::recv_message(SrsMessage** pmsg)
 {
     *pmsg = NULL;
@@ -452,7 +442,7 @@ int SrsProtocol::do_send_and_free_message(SrsMessage* msg, SrsPacket* packet)
     
     // always free msg.
     srs_assert(msg);
-    SrsAutoFree(SrsMessage, msg, false);
+    SrsAutoFree(SrsMessage, msg);
     
     // we donot use the complex basic header,
     // ensure the basic header is 1bytes.
@@ -745,7 +735,7 @@ int SrsProtocol::send_and_free_packet(SrsPacket* packet, int stream_id)
     int ret = ERROR_SUCCESS;
     
     srs_assert(packet);
-    SrsAutoFree(SrsPacket, packet, false);
+    SrsAutoFree(SrsPacket, packet);
     
     int size = 0;
     char* payload = NULL;
@@ -1284,7 +1274,7 @@ int SrsProtocol::on_recv_message(SrsMessage* msg)
     srs_assert(packet);
     
     // always free the packet.
-    SrsAutoFree(SrsPacket, packet, false);
+    SrsAutoFree(SrsPacket, packet);
     
     switch (msg->header.message_type) {
         case RTMP_MSG_WindowAcknowledgementSize: {
@@ -1548,7 +1538,7 @@ SrsCommonMessage::SrsCommonMessage()
 
 SrsCommonMessage::~SrsCommonMessage()
 {
-    srs_freepa(payload);
+    srs_freep(payload);
 }
 
 SrsSharedPtrMessage::__SrsSharedPtr::__SrsSharedPtr()
@@ -1560,7 +1550,7 @@ SrsSharedPtrMessage::__SrsSharedPtr::__SrsSharedPtr()
 
 SrsSharedPtrMessage::__SrsSharedPtr::~__SrsSharedPtr()
 {
-    srs_freepa(payload);
+    srs_freep(payload);
 }
 
 SrsSharedPtrMessage::SrsSharedPtrMessage()
@@ -1688,14 +1678,14 @@ int SrsPacket::encode(int& psize, char*& ppayload)
         
         if ((ret = stream.initialize(payload, size)) != ERROR_SUCCESS) {
             srs_error("initialize the stream failed. ret=%d", ret);
-            srs_freepa(payload);
+            srs_freep(payload);
             return ret;
         }
     }
     
     if ((ret = encode_packet(&stream)) != ERROR_SUCCESS) {
         srs_error("encode the packet failed. ret=%d", ret);
-        srs_freepa(payload);
+        srs_freep(payload);
         return ret;
     }
     
@@ -2594,7 +2584,7 @@ int SrsPlayPacket::decode(SrsStream* stream)
         srs_error("amf0 read play reset marker failed. ret=%d", ret);
         return ret;
     }
-    SrsAutoFree(SrsAmf0Any, reset_value, false);
+    SrsAutoFree(SrsAmf0Any, reset_value);
     
     if (reset_value) {
         // check if the value is bool or number
@@ -3170,7 +3160,7 @@ int SrsOnMetaDataPacket::decode(SrsStream* stream)
         return ret;
     }
     
-    SrsAutoFree(SrsAmf0Any, any, false);
+    SrsAutoFree(SrsAmf0Any, any);
     
     if (any->is_ecma_array()) {
         SrsAmf0EcmaArray* arr = any->to_ecma_array();

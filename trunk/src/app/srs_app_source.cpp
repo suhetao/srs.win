@@ -815,7 +815,7 @@ int SrsSource::on_meta_data(SrsMessage* msg, SrsOnMetaDataPacket* metadata)
 #endif
     
     metadata->metadata->set("server", SrsAmf0Any::str(RTMP_SIG_SRS_KEY" "RTMP_SIG_SRS_VERSION" ("RTMP_SIG_SRS_URL_SHORT")"));
-    metadata->metadata->set("contributor", SrsAmf0Any::str(RTMP_SIG_SRS_PRIMARY_AUTHROS));
+    metadata->metadata->set("authors", SrsAmf0Any::str(RTMP_SIG_SRS_PRIMARY_AUTHROS));
     
     SrsAmf0Any* prop = NULL;
     if ((prop = metadata->metadata->get_property("audiosamplerate")) != NULL) {
@@ -844,7 +844,7 @@ int SrsSource::on_meta_data(SrsMessage* msg, SrsOnMetaDataPacket* metadata)
     char* payload = NULL;
     if ((ret = metadata->encode(size, payload)) != ERROR_SUCCESS) {
         srs_error("encode metadata error. ret=%d", ret);
-        srs_freepa(payload);
+        srs_freep(payload);
         return ret;
     }
     srs_verbose("encode metadata success.");
@@ -898,7 +898,7 @@ int SrsSource::on_audio(SrsMessage* audio)
     int ret = ERROR_SUCCESS;
     
     SrsSharedPtrMessage* msg = new SrsSharedPtrMessage();
-    SrsAutoFree(SrsSharedPtrMessage, msg, false);
+    SrsAutoFree(SrsSharedPtrMessage, msg);
     if ((ret = msg->initialize(audio)) != ERROR_SUCCESS) {
         srs_error("initialize the audio failed. ret=%d", ret);
         return ret;
@@ -955,6 +955,7 @@ int SrsSource::on_audio(SrsMessage* audio)
     }
 
     // cache the sequence header if h264
+    // donot cache the sequence header to gop_cache, return here.
     if (SrsCodec::audio_is_sequence_header(msg->payload, msg->size)) {
         srs_freep(cache_sh_audio);
         cache_sh_audio = msg->copy();
@@ -987,7 +988,7 @@ int SrsSource::on_video(SrsMessage* video)
     int ret = ERROR_SUCCESS;
     
     SrsSharedPtrMessage* msg = new SrsSharedPtrMessage();
-    SrsAutoFree(SrsSharedPtrMessage, msg, false);
+    SrsAutoFree(SrsSharedPtrMessage, msg);
     if ((ret = msg->initialize(video)) != ERROR_SUCCESS) {
         srs_error("initialize the video failed. ret=%d", ret);
         return ret;
@@ -1044,6 +1045,7 @@ int SrsSource::on_video(SrsMessage* video)
     }
 
     // cache the sequence header if h264
+    // donot cache the sequence header to gop_cache, return here.
     if (SrsCodec::video_is_sequence_header(msg->payload, msg->size)) {
         srs_freep(cache_sh_video);
         cache_sh_video = msg->copy();
@@ -1248,15 +1250,12 @@ void SrsSource::on_unpublish()
     
     double queue_size = _srs_config->get_queue_length(_req->vhost);
     consumer->set_queue_size(queue_size);
-
-    if (cache_metadata && (ret = consumer->enqueue(cache_metadata->copy(), sample_rate, frame_rate)) != ERROR_SUCCESS) {
-        srs_error("dispatch metadata failed. ret=%d", ret);
-        return ret;
-    }
-    srs_info("dispatch metadata success");
     
     // if atc, update the sequence header to gop cache time.
     if (atc && !gop_cache->empty()) {
+        if (cache_metadata) {
+            cache_metadata->header.timestamp = gop_cache->get_start_time();
+        }
         if (cache_sh_video) {
             cache_sh_video->header.timestamp = gop_cache->get_start_time();
         }
@@ -1264,6 +1263,13 @@ void SrsSource::on_unpublish()
             cache_sh_audio->header.timestamp = gop_cache->get_start_time();
         }
     }
+
+    // copy metadata.
+    if (cache_metadata && (ret = consumer->enqueue(cache_metadata->copy(), sample_rate, frame_rate)) != ERROR_SUCCESS) {
+        srs_error("dispatch metadata failed. ret=%d", ret);
+        return ret;
+    }
+    srs_info("dispatch metadata success");
     
     // copy sequence header
     if (cache_sh_video && (ret = consumer->enqueue(cache_sh_video->copy(), sample_rate, frame_rate)) != ERROR_SUCCESS) {

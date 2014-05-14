@@ -302,6 +302,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\app\srs_app_kbps.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\app\srs_app_kbps.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\app\srs_app_log.cpp"
 				>
 			</File>
@@ -517,6 +525,26 @@
 		<Filter
 			Name="win32"
 			>
+			<File
+				RelativePath="..\src\resource.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\time.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\uio.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\unistd.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\utils.c"
+				>
+			</File>
 			<Filter
 				Name="lib"
 				>
@@ -545,31 +573,23 @@
 					</File>
 				</Filter>
 			</Filter>
+			<Filter
+				Name="inc"
+				>
+				<File
+					RelativePath="..\inc\srs_auto_headers.hpp"
+					>
+				</File>
+				<File
+					RelativePath="..\inc\unistd.h"
+					>
+				</File>
+				<File
+					RelativePath="..\inc\utils.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
-		<File
-			RelativePath="..\src\fcntl.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\src\resource.c"
-			>
-		</File>
-		<File
-			RelativePath="..\src\time.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\src\uio.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\src\unistd.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\src\utils.cpp"
-			>
-		</File>
 	</Files>
 	<Globals>
 	</Globals>

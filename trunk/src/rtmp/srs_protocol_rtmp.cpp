@@ -192,9 +192,9 @@ SrsHandshakeBytes::SrsHandshakeBytes()
 
 SrsHandshakeBytes::~SrsHandshakeBytes() 
 {
-    srs_freepa(c0c1);
-    srs_freepa(s0s1s2);
-    srs_freepa(c2);
+    srs_freep(c0c1);
+    srs_freep(s0s1s2);
+    srs_freep(c2);
 }
 
 int SrsHandshakeBytes::read_c0c1(ISrsProtocolReaderWriter* io)
@@ -375,16 +375,6 @@ int64_t SrsRtmpClient::get_send_bytes()
     return protocol->get_send_bytes();
 }
 
-int SrsRtmpClient::get_recv_kbps()
-{
-    return protocol->get_recv_kbps();
-}
-
-int SrsRtmpClient::get_send_kbps()
-{
-    return protocol->get_send_kbps();
-}
-
 int SrsRtmpClient::recv_message(SrsMessage** pmsg)
 {
     return protocol->recv_message(pmsg);
@@ -500,8 +490,8 @@ int SrsRtmpClient::connect_app(string app, string tc_url)
         srs_error("expect connect app response message failed. ret=%d", ret);
         return ret;
     }
-    SrsAutoFree(SrsMessage, msg, false);
-    SrsAutoFree(SrsConnectAppResPacket, pkt, false);
+    SrsAutoFree(SrsMessage, msg);
+    SrsAutoFree(SrsConnectAppResPacket, pkt);
     srs_info("get connect app response message");
     
     return ret;
@@ -527,8 +517,8 @@ int SrsRtmpClient::create_stream(int& stream_id)
             srs_error("expect create stream response message failed. ret=%d", ret);
             return ret;
         }
-        SrsAutoFree(SrsMessage, msg, false);
-        SrsAutoFree(SrsCreateStreamResPacket, pkt, false);
+        SrsAutoFree(SrsMessage, msg);
+        SrsAutoFree(SrsCreateStreamResPacket, pkt);
         srs_info("get create stream response message");
 
         stream_id = (int)pkt->stream_id;
@@ -661,8 +651,8 @@ int SrsRtmpClient::fmle_publish(string stream, int& stream_id)
             srs_error("expect create stream response message failed. ret=%d", ret);
             return ret;
         }
-        SrsAutoFree(SrsMessage, msg, false);
-        SrsAutoFree(SrsCreateStreamResPacket, pkt, false);
+        SrsAutoFree(SrsMessage, msg);
+        SrsAutoFree(SrsCreateStreamResPacket, pkt);
         srs_info("get create stream response message");
 
         stream_id = (int)pkt->stream_id;
@@ -730,16 +720,6 @@ int64_t SrsRtmpServer::get_send_bytes()
     return protocol->get_send_bytes();
 }
 
-int SrsRtmpServer::get_recv_kbps()
-{
-    return protocol->get_recv_kbps();
-}
-
-int SrsRtmpServer::get_send_kbps()
-{
-    return protocol->get_send_kbps();
-}
-
 int SrsRtmpServer::recv_message(SrsMessage** pmsg)
 {
     return protocol->recv_message(pmsg);
@@ -792,8 +772,8 @@ int SrsRtmpServer::connect_app(SrsRequest* req)
         srs_error("expect connect app message failed. ret=%d", ret);
         return ret;
     }
-    SrsAutoFree(SrsMessage, msg, false);
-    SrsAutoFree(SrsConnectAppPacket, pkt, false);
+    SrsAutoFree(SrsMessage, msg);
+    SrsAutoFree(SrsConnectAppPacket, pkt);
     srs_info("get connect app message");
     
     SrsAmf0Any* prop = NULL;
@@ -942,7 +922,7 @@ int SrsRtmpServer::identify_client(int stream_id, SrsRtmpConnType& type, string&
             return ret;
         }
 
-        SrsAutoFree(SrsMessage, msg, false);
+        SrsAutoFree(SrsMessage, msg);
 
         if (!msg->header.is_amf0_command() && !msg->header.is_amf3_command()) {
             srs_trace("identify ignore messages except "
@@ -956,7 +936,7 @@ int SrsRtmpServer::identify_client(int stream_id, SrsRtmpConnType& type, string&
             return ret;
         }
         
-        SrsAutoFree(SrsPacket, pkt, false);
+        SrsAutoFree(SrsPacket, pkt);
         
         if (dynamic_cast<SrsCreateStreamPacket*>(pkt)) {
             srs_info("identify client by create stream, play or flash publish.");
@@ -1148,8 +1128,8 @@ int SrsRtmpServer::start_fmle_publish(int stream_id)
         }
         srs_info("recv FCPublish request message success.");
         
-        SrsAutoFree(SrsMessage, msg, false);
-        SrsAutoFree(SrsFMLEStartPacket, pkt, false);
+        SrsAutoFree(SrsMessage, msg);
+        SrsAutoFree(SrsFMLEStartPacket, pkt);
     
         fc_publish_tid = pkt->transaction_id;
     }
@@ -1174,8 +1154,8 @@ int SrsRtmpServer::start_fmle_publish(int stream_id)
         }
         srs_info("recv createStream request message success.");
         
-        SrsAutoFree(SrsMessage, msg, false);
-        SrsAutoFree(SrsCreateStreamPacket, pkt, false);
+        SrsAutoFree(SrsMessage, msg);
+        SrsAutoFree(SrsCreateStreamPacket, pkt);
         
         create_stream_tid = pkt->transaction_id;
     }
@@ -1199,8 +1179,8 @@ int SrsRtmpServer::start_fmle_publish(int stream_id)
         }
         srs_info("recv publish request message success.");
         
-        SrsAutoFree(SrsMessage, msg, false);
-        SrsAutoFree(SrsPublishPacket, pkt, false);
+        SrsAutoFree(SrsMessage, msg);
+        SrsAutoFree(SrsPublishPacket, pkt);
     }
     // publish response onFCPublish(NetStream.Publish.Start)
     if (true) {
@@ -1330,7 +1310,7 @@ int SrsRtmpServer::identify_create_stream_client(SrsCreateStreamPacket* req, int
             return ret;
         }
 
-        SrsAutoFree(SrsMessage, msg, false);
+        SrsAutoFree(SrsMessage, msg);
 
         if (!msg->header.is_amf0_command() && !msg->header.is_amf3_command()) {
             srs_trace("identify ignore messages except "
@@ -1344,7 +1324,7 @@ int SrsRtmpServer::identify_create_stream_client(SrsCreateStreamPacket* req, int
             return ret;
         }
 
-        SrsAutoFree(SrsPacket, pkt, false);
+        SrsAutoFree(SrsPacket, pkt);
         
         if (dynamic_cast<SrsPlayPacket*>(pkt)) {
             srs_info("level1 identify client by play.");

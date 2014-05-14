@@ -42,6 +42,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <srs_app_pithy_print.hpp>
 #include <srs_core_autofree.hpp>
 #include <srs_app_socket.hpp>
+#include <srs_app_kbps.hpp>
 
 // when error, edge ingester sleep for a while and retry.
 #define SRS_EDGE_INGESTER_SLEEP_US (int64_t)(1*1000*1000LL)
@@ -61,6 +62,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 SrsEdgeIngester::SrsEdgeIngester()
 {
     io = NULL;
+    kbps = new SrsKbps();
     client = NULL;
     _edge = NULL;
     _req = NULL;
@@ -75,6 +77,7 @@ SrsEdgeIngester::~SrsEdgeIngester()
     stop();
     
     srs_freep(pthread);
+    srs_freep(kbps);
 }
 
 int SrsEdgeIngester::initialize(SrsSource* source, SrsPlayEdge* edge, SrsRequest* req)
@@ -101,6 +104,7 @@ void SrsEdgeIngester::stop()
     
     srs_freep(client);
     srs_freep(io);
+    kbps->set_io(NULL, NULL);
 }
 
 int SrsEdgeIngester::cycle()
@@ -168,10 +172,12 @@ int SrsEdgeIngester::ingest()
         
         // pithy print
         if (pithy_print.can_print()) {
+            kbps->sample();
             srs_trace("<- "SRS_LOG_ID_EDGE_PLAY
-                " time=%"PRId64", obytes=%"PRId64", ibytes=%"PRId64", okbps=%d, ikbps=%d", 
-                pithy_print.age(), client->get_send_bytes(), client->get_recv_bytes(), 
-                client->get_send_kbps(), client->get_recv_kbps());
+                " time=%"PRId64", okbps=%d,%d,%d, ikbps=%d,%d,%d", 
+                pithy_print.age(),
+                kbps->get_send_kbps(), kbps->get_send_kbps_sample_high(), kbps->get_send_kbps_sample_medium(),
+                kbps->get_recv_kbps(), kbps->get_recv_kbps_sample_high(), kbps->get_recv_kbps_sample_medium());
         }
 
         // read from client.
@@ -183,7 +189,7 @@ int SrsEdgeIngester::ingest()
         srs_verbose("edge loop recv message. ret=%d", ret);
         
         srs_assert(msg);
-        SrsAutoFree(SrsMessage, msg, false);
+        SrsAutoFree(SrsMessage, msg);
         
         if ((ret = process_publish_message(msg)) != ERROR_SUCCESS) {
             return ret;
@@ -231,7 +237,7 @@ int SrsEdgeIngester::process_publish_message(SrsMessage* msg)
             srs_error("decode onMetaData message failed. ret=%d", ret);
             return ret;
         }
-        SrsAutoFree(SrsPacket, pkt, false);
+        SrsAutoFree(SrsPacket, pkt);
     
         if (dynamic_cast<SrsOnMetaDataPacket*>(pkt)) {
             SrsOnMetaDataPacket* metadata = dynamic_cast<SrsOnMetaDataPacket*>(pkt);
@@ -303,6 +309,7 @@ int SrsEdgeIngester::connect_server()
     
     io = new SrsSocket(stfd);
     client = new SrsRtmpClient(io);
+    kbps->set_io(io, io);
     
     // connect to server.
     std::string ip = srs_dns_resolve(server);
@@ -330,6 +337,7 @@ int SrsEdgeIngester::connect_server()
 SrsEdgeForwarder::SrsEdgeForwarder()
 {
     io = NULL;
+    kbps = new SrsKbps();
     client = NULL;
     _edge = NULL;
     _req = NULL;
@@ -347,6 +355,7 @@ SrsEdgeForwarder::~SrsEdgeForwarder()
     
     srs_freep(pthread);
     srs_freep(queue);
+    srs_freep(kbps);
 }
 
 void SrsEdgeForwarder::set_queue_size(double queue_size)
@@ -411,6 +420,7 @@ void SrsEdgeForwarder::stop()
     
     srs_freep(client);
     srs_freep(io);
+    kbps->set_io(NULL, NULL);
 }
 
 int SrsEdgeForwarder::cycle()
@@ -457,10 +467,12 @@ int SrsEdgeForwarder::cycle()
         
         // pithy print
         if (pithy_print.can_print()) {
+            kbps->sample();
             srs_trace("-> "SRS_LOG_ID_EDGE_PUBLISH
-                " time=%"PRId64", msgs=%d, obytes=%"PRId64", ibytes=%"PRId64", okbps=%d, ikbps=%d", 
-                pithy_print.age(), count, client->get_send_bytes(), client->get_recv_bytes(), 
-                client->get_send_kbps(), client->get_recv_kbps());
+                " time=%"PRId64", msgs=%d, okbps=%d,%d,%d, ikbps=%d,%d,%d", 
+                pithy_print.age(), count,
+                kbps->get_send_kbps(), kbps->get_send_kbps_sample_high(), kbps->get_send_kbps_sample_medium(),
+                kbps->get_recv_kbps(), kbps->get_recv_kbps_sample_high(), kbps->get_recv_kbps_sample_medium());
         }
         
         // ignore when no messages.
@@ -468,9 +480,11 @@ int SrsEdgeForwarder::cycle()
             srs_verbose("no packets to forward.");
             continue;
         }
-        SrsAutoFree(SrsSharedPtrMessage*, msgs, true);
+        SrsAutoFreeArray(SrsSharedPtrMessage, msgs, count);
     
-        // all msgs to forward.
+        // all msgs to forward to origin.
+        // @remark, becareful, all msgs must be free explicitly,
+        //      free by send_and_free_message or srs_freep.
         for (int i = 0; i < count; i++) {
             SrsSharedPtrMessage* msg = msgs[i];
             
@@ -508,7 +522,7 @@ int SrsEdgeForwarder::proxy(SrsMessage* msg)
     
     // TODO: FIXME: use utility to copy msg to shared ptr msg.
     SrsSharedPtrMessage* copy = new SrsSharedPtrMessage();
-    SrsAutoFree(SrsSharedPtrMessage, copy, false);
+    SrsAutoFree(SrsSharedPtrMessage, copy);
     if ((ret = copy->initialize(msg)) != ERROR_SUCCESS) {
         srs_error("initialize the msg failed. ret=%d", ret);
         return ret;
@@ -576,6 +590,7 @@ int SrsEdgeForwarder::connect_server()
     
     io = new SrsSocket(stfd);
     client = new SrsRtmpClient(io);
+    kbps->set_io(io, io);
     
     // connect to server.
     std::string ip = srs_dns_resolve(server);

@@ -115,6 +115,7 @@ typedef uint8_t  u_int8_t;
 typedef int16_t   u_int16_t;
 typedef uint32_t  u_int32_t;
 typedef int ssize_t;
+typedef unsigned int size_t;
 
 // 7.18.1.4 Integer types capable of holding object pointers
 #ifdef _WIN64 // [

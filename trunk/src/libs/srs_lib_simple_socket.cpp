@@ -44,9 +44,6 @@ SimpleSocketStream::SimpleSocketStream()
     fd = -1;
     send_timeout = recv_timeout = ST_UTIME_NO_TIMEOUT;
     recv_bytes = send_bytes = 0;
-    
-    srs_update_system_time_ms();
-    start_time_ms = srs_get_system_time_ms();
 }
 
 SimpleSocketStream::~SimpleSocketStream()
@@ -85,8 +82,7 @@ int SimpleSocketStream::read(const void* buf, size_t size, ssize_t* nread)
 {
     int ret = ERROR_SUCCESS;
     
-    //*nread = ::recv(fd, (void*)buf, size, 0);
-	*nread = ::recv(fd, (char*)buf, size, 0);
+    *nread = ::recv(fd, (void*)buf, size, 0);
     
     // On success a non-negative integer indicating the number of bytes actually read is returned 
     // (a value of 0 means the network connection is closed or end of file is reached).
@@ -123,18 +119,6 @@ int64_t SimpleSocketStream::get_recv_bytes()
     return recv_bytes;
 }
 
-int SimpleSocketStream::get_recv_kbps()
-{
-    srs_update_system_time_ms();
-    int64_t diff_ms = srs_get_system_time_ms() - start_time_ms;
-    
-    if (diff_ms <= 0) {
-        return 0;
-    }
-    
-    return recv_bytes * 8 / diff_ms;
-}
-
 // ISrsProtocolWriter
 void SimpleSocketStream::set_send_timeout(int64_t timeout_us)
 {
@@ -149,18 +133,6 @@ int64_t SimpleSocketStream::get_send_timeout()
 int64_t SimpleSocketStream::get_send_bytes()
 {
     return send_bytes;
-}
-
-int SimpleSocketStream::get_send_kbps()
-{
-    srs_update_system_time_ms();
-    int64_t diff_ms = srs_get_system_time_ms() - start_time_ms;
-    
-    if (diff_ms <= 0) {
-        return 0;
-    }
-    
-    return send_bytes * 8 / diff_ms;
 }
 
 int SimpleSocketStream::writev(const iovec *iov, int iov_size, ssize_t* nwrite)
@@ -216,8 +188,7 @@ int SimpleSocketStream::write(const void* buf, size_t size, ssize_t* nwrite)
 {
     int ret = ERROR_SUCCESS;
     
-    //*nwrite = ::send(fd, (void*)buf, size, 0);
-	*nwrite = ::send(fd, (char*)buf, size, 0);
+    *nwrite = ::send(fd, (void*)buf, size, 0);
     
     if (*nwrite <= 0) {
         if (errno == ETIME) {
