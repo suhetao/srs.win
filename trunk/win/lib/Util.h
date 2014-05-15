@@ -17,6 +17,7 @@ void *xCalloc(unsigned int nSize, unsigned int nCount);
 void xFree(void* Ptr);
 
 void *xMemCpy(void *pDst,const void *pSrc,unsigned int Num);
+int xMemCmp(const void *pSrc, const void *pTar, unsigned int n);
 void *xMemSet(void* pDst, char c, unsigned int len);
 void *xMemMove(void *pDst, const void *pSrc, unsigned int size);
 

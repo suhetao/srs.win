@@ -1,105 +1,203 @@
 #include "Vector.h"
 #include "Util.h"
 
-Vector* Vector_New(int length)
+Vector* Vector_New(unsigned int elem_size,unsigned int size)
 {
-	Vector* newVector;
-	if (length <= 0){
-		length = DEFALUT_VECTOR_SIZE;
+	Vector* newVector = NULL;
+
+	if (!elem_size){
+		return NULL;
 	}
-	newVector = (Vector*)xMalloc(length * sizeof(Vector));
+	if (size <= 0){
+		size = DEFALUT_VECTOR_SIZE;
+	}
+	newVector = (Vector*)xMalloc(sizeof(Vector));
 	if (NULL == newVector){
 		return NULL;
 	}
-	newVector->alloced = length;
-	newVector->length = 0;
-
-	newVector->data = xMalloc(length * sizeof(Element));
-
-	if (newVector->data == NULL) {
+	newVector->element = xMalloc(elem_size * size);
+	if (NULL == newVector->element){
 		xFree(newVector);
+		newVector = NULL;
 		return NULL;
 	}
+	newVector->size = 0;
+	newVector->capacity = size;
+	newVector->elem_size = elem_size;
 
 	return newVector;
 }
 
-void Vector_Free(Vector *v)
+void Vector_Free(Vector **v)
 {
-	if (v != NULL) {
-		xFree(v->data);
-		xFree(v);
+	if (NULL != *v) {
+		if ((*v)->element != NULL){
+			xFree((*v)->element);
+		}
+		xFree(*v);
 	}
 }
 
 int Vector_Enlarge(Vector *v)
 {
-	Element* data;
-	int newsize;
+	Element element = NULL;
+	unsigned int capacity = 0;
 
-	newsize = v->alloced * 2;
+	if (NULL == v){
+		return -1;
+	}
+	
+	capacity = v->capacity * 2;
+	element = xRealloc(v->element, v->elem_size * capacity);
 
-	data = (Element*)xRealloc(v->data, sizeof(Element) * newsize);
-
-	if (data == NULL) {
+	if (element == NULL) {
 		return 0;
 	} else {
-		v->data = data;
-		v->alloced = newsize;
+		v->capacity = capacity;
+		v->element = element;
 		return 1;
 	}
 }
 
-int Vector_Insert(Vector *v, int index, Element data)
+void* Vector_At(Vector *v, unsigned int index)
 {
-	if (index < 0 || index > v->length) {
+	if( index < 0 || index > v->size ){
+		return NULL;
+	}
+	return v->element + v->elem_size * index;
+}
+
+void* Vector_Front(Vector* v)
+{
+	if( v->size == 0 ){
+		return NULL;
+	}
+	return v->element;
+}
+
+void* Vector_Back(Vector* v)
+{
+	if( v->size == 0 ){
+		return NULL;
+	}
+	return v->element + ( v->size - 1 ) * v->elem_size ;
+}
+
+int Vector_Empty(Vector* v)
+{
+	if( v->size ){
 		return 0;
 	}
-	
-	if (v->length + 1 > v->alloced) {
-		if (!Vector_Enlarge(v)) {
-			return 0;
-		}
-	}
-
-	xMemMove(&v->data[index + 1], 
-	        &v->data[index],
-	        (v->length - index) * sizeof(Element));
-
-	v->data[index] = data;
-	++v->length;
-
 	return 1;
 }
-
-int Vector_Append(Vector *v, Element data)
+unsigned int Vector_Size(Vector* v)
 {
-	return Vector_Insert(v, v->length, data);
+	return v->size;
 }
 
-void Vector_Clear(Vector *v)
+unsigned int Vector_Capacity(Vector* v)
 {
-	v->length = 0;
+	return v->capacity;
 }
 
-void Vector_Remove_Range(Vector *v, int index, int length)
+int Vector_Reserve(Vector* v, unsigned int new_cap)
 {
-	if (index < 0 || length < 0) {
-		return;
-	}
-	if(index + length > v->length){
-		v->length = 0;
-		return;
+	if( v->capacity >= new_cap ){
+		return 0;
 	}
 
-	xMemMove(&v->data[index],
-		&v->data[index + length],
-		(v->length - (index + length)) * sizeof(Element));
-
-	v->length -= length;
+	v->element = xRealloc(v->element, new_cap * v->elem_size );
+	if( NULL == v->element ){
+		return -1;
+	}
+	return 0;
 }
 
-void Vector_Remove(Vector *v, int index)
+void Vector_Clear(Vector* v)
 {
-	Vector_Remove_Range(v, index, 1);
+	xMemSet( v->element, 0 , v->elem_size * v->size);
+}
+
+int Vector_Insert(Vector* v,void *elem, unsigned int index)
+{
+	unsigned int pos = 0;
+	unsigned int i = 0;
+
+	if( v->size + 1 >= v->capacity ){
+		Vector_Enlarge(v);
+	}
+	if( index <= 0 ){
+		pos = 0;
+	}
+	else if( index >= v->size ){
+		pos = v->size;
+	}
+	else{
+		pos = index;
+	}
+
+	for( i = v->size; i > pos ; --i){
+		*(v->element + v->elem_size * i) = *(v->element + v->elem_size * (i-1) );
+	}
+	xMemCpy(v->element + v->elem_size * pos, elem, v->elem_size);
+	v->size++;
+	return 0;
+}
+
+int Vector_Erase(Vector* v, unsigned int index)
+{
+	unsigned int pos = 0;
+	unsigned int i = 0;
+
+	if( index <= 0 ){
+		pos = 0;
+	}
+	else if( index >= v->size){
+		pos = v->size;
+	}
+	else{
+		pos = index;
+	}
+	for( i = pos ; i < v->size - 1 ; ++i ){
+		*(v->element + v->elem_size * i) = *( v->element + v->elem_size * (i+1));
+	}
+	xMemSet( v->element + v->elem_size * v->size  , 0 , v->elem_size);
+	v->size--;
+	return 0;
+}
+int Vector_Push_Back(Vector* v,void *elem)
+{
+	 return Vector_Insert(v,elem,v->size);
+}
+
+int Vector_Append(Vector* v,void *elem)
+{
+	return Vector_Push_Back(v,elem);
+}
+
+int Vector_Pop_Back(Vector* v,void *elem)
+{
+	if( 0 == v->size || NULL == v){
+		return -1;
+	}
+	xMemCpy(elem, v->element + v->elem_size * v->size , v->elem_size);
+	xMemSet(v->element + v->elem_size * v->size , 0 , v->elem_size);
+	v->size--;
+	return 0;
+}
+
+int Vector_Resize(Vector* v)
+{
+	if( v->capacity * 2/3 > v->size ){
+		v->element = xRealloc(v->element, 2/3 * v->capacity * v->elem_size);
+	}
+	return 0;
+}
+
+int Vector_Equal(Vector* v1,Vector* v2)
+{
+	if( v1->size != v2->size ){
+		return -1;
+	}
+	return xMemCmp(v1->element,v2->element,v1->size);
 }

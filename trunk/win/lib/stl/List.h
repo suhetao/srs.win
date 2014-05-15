@@ -20,6 +20,7 @@ extern "C"
 #endif
 
 int List_Create(LIST **list,unsigned int elem_size);
+LIST* List_New(unsigned int elem_size);
 int List_Free(LIST **list);
 void* List_Front(LIST *list);
 void* List_Back(LIST *list);
@@ -32,6 +33,9 @@ void List_Push_Back(LIST *list, void *elem);
 void List_Pop_Back(LIST *list, void *elem);
 void List_Push_Front(LIST *list, void *elem);
 void List_Pop_Front(LIST *list,void *elem);
+
+void* List_At(LIST *list, unsigned int index);
+int List_Remove(LIST* list, void *data);
 
 #ifdef __cplusplus
 }

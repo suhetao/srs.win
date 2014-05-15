@@ -72,6 +72,27 @@ void *xMemCpy(void *pDst,const void *pSrc,unsigned int Num)
 	return pDst;  
 }
 
+
+int xMemCmp(const void *pSrc, const void *pTar, unsigned int n)
+{
+	const unsigned char *src = pSrc;
+	const unsigned char *tar = pTar;
+	int ret = 0;
+
+	if (NULL == src || NULL == tar){
+		return -1;
+	}
+
+	while (n--) {
+		ret = (int)*src++ - (int)*tar++;
+		if (ret)
+			break;
+	}
+
+	return ret;
+}
+
+
 void *xMemSet(void* pDst, char c, unsigned int len)
 {
 	char *p = NULL;

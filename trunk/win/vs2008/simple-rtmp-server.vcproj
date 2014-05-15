@@ -571,14 +571,6 @@
 						RelativePath="..\lib\myst\st.h"
 						>
 					</File>
-					<File
-						RelativePath="..\lib\myst\Thread.c"
-						>
-					</File>
-					<File
-						RelativePath="..\lib\myst\Thread.h"
-						>
-					</File>
 				</Filter>
 				<Filter
 					Name="stl"
@@ -641,6 +633,22 @@
 					</File>
 					<File
 						RelativePath="..\lib\IOCP\SocketPool.h"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\myst\Thread.c"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\myst\Thread.h"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\IOCP\TimerQueue.c"
+						>
+					</File>
+					<File
+						RelativePath="..\lib\IOCP\TimerQueue.h"
 						>
 					</File>
 				</Filter>

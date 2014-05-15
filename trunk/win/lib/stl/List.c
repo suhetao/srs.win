@@ -23,6 +23,26 @@ int List_Create(LIST **list,unsigned int elem_size)
 	return 0;
 }
 
+LIST* List_New(unsigned int elem_size)
+{
+	LIST* list = NULL;
+	list = xMalloc(sizeof(LIST));
+	if( NULL == list){
+		return NULL;
+	}
+
+	list->size = 0;
+	list->elem_size = elem_size;
+	list->head = xMalloc(sizeof(LIST_NODE*));
+
+	if( NULL == list->head ){
+		xFree((list));
+		return NULL;
+	}
+	return list;
+}
+
+
 int List_Free(LIST **list)
 {
 	LIST_NODE *tmp = NULL;
@@ -66,7 +86,8 @@ void* List_Back(LIST *list)
 	while( ptr->next != NULL ){
 		ptr = ptr->next;
 	}
-	return ptr->element;
+	//return ptr->element;
+	return ptr;
 }
 
 int List_Empty(LIST *list){
@@ -120,7 +141,7 @@ void List_Insert(LIST *list,void *elem, unsigned int index)
 	while( ptr != NULL && counter < index ){
 		ptr2 = ptr;
 		ptr = ptr->next;
-		counter += 1;
+		counter ++;
 	}
 	ptr = ptr2;
 
@@ -275,4 +296,58 @@ void List_Pop_Front(LIST *list,void *elem)
 		xFree(ptr);
 	}
 	list->size -= 1;
+}
+
+void* List_At(LIST *list, unsigned int index)
+{
+	LIST_NODE* ptr = NULL;
+	LIST_NODE* node = NULL;
+	unsigned int counter = 0;
+
+	if( NULL == list || !list->size){
+		return NULL;
+	}
+	if (index >= list->size){
+		return NULL;
+	}
+
+	ptr = list->head;
+
+	while( ptr != NULL && counter <= index ){
+		node = ptr;
+		ptr = ptr->next;
+		counter++;
+	}
+	return node;
+}
+
+int List_Remove(LIST* list, void *data)
+{
+	LIST_NODE *ptr = NULL;
+	LIST_NODE *node = NULL;
+	unsigned int found = FALSE;
+
+	if( NULL == list || !list->size){
+		return -1;
+	}
+
+	ptr = list->head;
+
+	while( ptr != NULL){
+		node = ptr;
+		if (!xMemCmp(node->element, data, list->elem_size)){
+			node->prev->next = node->next;
+			node->next->prev = node->prev;
+			xFree(node->element);
+			xFree(node);
+			found = TRUE;
+			break;
+		}
+		ptr = ptr->next;
+	}
+	if (!found){
+		return -1;
+	}
+	list->size -= 1;
+	return 0;
 }
