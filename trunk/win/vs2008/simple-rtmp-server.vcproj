@@ -636,11 +636,11 @@
 						>
 					</File>
 					<File
-						RelativePath="..\lib\myst\Thread.c"
+						RelativePath="..\lib\IOCP\Thread.c"
 						>
 					</File>
 					<File
-						RelativePath="..\lib\myst\Thread.h"
+						RelativePath="..\lib\IOCP\Thread.h"
 						>
 					</File>
 					<File
