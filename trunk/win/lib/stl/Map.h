@@ -37,6 +37,6 @@ int Map_Exists(Map* pMap, void* key);
 int Map_Remove(Map* pMap, void* key);
 int Map_Find(Map* pMap, void* key, void**value);
 int Map_Delete(Map* pMap);
-
+void Map_Foreach(Map* pMap, void (*Handler)(Rb_Node*));
 
 #endif

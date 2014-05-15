@@ -375,3 +375,22 @@ int Map_Delete(Map* pMap)
 	}
 	return rc;
 }
+
+static void Map_Preorder(Rb_Node* node, void (*Handler)(Rb_Node*)) 
+{
+	if (NULL != node) {  
+		Map_Preorder(node->left, Handler);  
+		Handler(node);  
+		Map_Preorder(node->right, Handler);  
+	} 
+}
+
+void Map_Foreach(Map* pMap, void (*Handler)(Rb_Node*))
+{
+	Rb_Node* node = NULL;
+	if (NULL == pMap || NULL == pMap->root){
+		return;
+	}
+	node = pMap->root->root;
+	Map_Preorder(node, Handler);
+}  

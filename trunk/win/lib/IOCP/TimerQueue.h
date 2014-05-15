@@ -96,7 +96,7 @@ void TimerQueue_Wakeup(TimerQueue* tq);
 void TimerQueue_OpAcquire(TimerQueue* tq, TimerDesc* timerPtr, int oppType);
 void TimerQueue_OpExecute(TimerQueue* tq);
 TimerQueue* TimerQueue_New(int poolSize);
-void TimerQueue_Destory(TimerQueue* tq);
+int TimerQueue_Destory(TimerQueue* tq);
 int TimerQueue_Init(TimerQueue* tq);
 Timer TimerQueue_CreateTimer(TimerQueue* tq, DWORD timeout, TimerCallBack callbackFunc, void* param);
 int TimerQueue_ChangeTimer(TimerQueue* tq, Timer timerPtr, DWORD timeout);

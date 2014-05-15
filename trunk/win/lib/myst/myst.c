@@ -5,10 +5,11 @@
 #include <errno.h>
 #include "neterr.h"
 #include "sys/uio.h"
+#include <stdlib.h>
+#include <memory.h>
+#include "utils.h"
 
 int poll(struct pollfd *pds, int npds, st_utime_t timeout);
-
-/* _st_GetError xlate winsock errors to unix */
 int _st_GetError(int err)
 {
 	int syserr;
@@ -98,7 +99,7 @@ APIEXPORT int st_connect(_st_netfd_t *fd, const struct sockaddr *addr, int addrl
 
 
 
-static st_netfd_t *_st_netfd_new(int osfd, int nonblock, int is_socket)
+static _st_netfd_t *_st_netfd_new(int osfd, int nonblock, int is_socket)
 {
 	_st_netfd_t *fd;
 	int flags = 1;
@@ -257,7 +258,7 @@ APIEXPORT ssize_t st_write(_st_netfd_t *fd, const void *buf, size_t nbyte,
 
 static ssize_t _st_writev(int fd, struct iovec *iov, unsigned int iov_cnt)
 {
-	int             i;
+	size_t  i;
 	size_t          total;
 	void*           pv = NULL;
 	ssize_t  ret;
@@ -450,8 +451,8 @@ int poll(struct pollfd *pds, int npds, st_utime_t timeout)
 		}
 
 	}
-	timeout_t.tv_sec = timeout / 1000;
-	timeout_t.tv_usec= (timeout % 1000) * 1000;
+	timeout_t.tv_sec = (unsigned long)(timeout / 1000);
+	timeout_t.tv_usec= (unsigned long)(timeout % 1000) * 1000;
 	tp= &timeout_t;
 	if (timeout == -1)
 	{

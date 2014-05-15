@@ -97,7 +97,7 @@ int TimerQueue_Init(TimerQueue* tq)
 	return TQ_SUCCESS;
 }
 
-int TimerQueue_Destroy(TimerQueue* tq)
+int TimerQueue_Destory(TimerQueue* tq)
 {
 	unsigned int i = 0;
 	LIST_NODE* timer = NULL;

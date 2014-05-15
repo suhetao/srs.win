@@ -17,7 +17,7 @@ extern "C"
 #endif
 
 LockPool* LockPool_New();
-void LockPool_Destory(LockPool*);
+int LockPool_Destroy(LockPool*);
 int LockPool_Init(LockPool*,unsigned int);
 Lock* LockPool_Allocate(LockPool*);
 void LockPool_Recycle(Lock*);

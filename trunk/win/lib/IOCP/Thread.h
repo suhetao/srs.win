@@ -77,7 +77,7 @@ VOID Thread_Destroy(VOID);
 INT MemCmp(VOID *pSrc,VOID *pDest,LONG lNum);
 INT GetNumberProcessors(VOID);
 
-static DWORD WINAPI ThreadWorker(LPVOID lpParam);
+DWORD WINAPI ThreadWorker(LPVOID lpParam);
 
 #ifdef __cplusplus
 }

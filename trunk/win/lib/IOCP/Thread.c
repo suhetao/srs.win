@@ -11,7 +11,7 @@ INT Thread_Create(ThreadHandle *pThreadHandle,INT* pAttr,VOID *(*StartRoutinePtr
     pThreadHandle->pArg    = pArg;
     pThreadHandle->ppRet  = &pThreadHandle->pRet;
     pThreadHandle->pRet    = NULL;
-    pThreadHandle->hHandle = (VOID*)CreateThread(pAttr, 0, ThreadWorker, pThreadHandle, 0, &pThreadHandle->dwThreadID);
+    pThreadHandle->hHandle = (VOID*)CreateThread((LPSECURITY_ATTRIBUTES)pAttr, 0, ThreadWorker, pThreadHandle, 0, &pThreadHandle->dwThreadID);
     return !pThreadHandle->hHandle;
 }
 
@@ -203,7 +203,7 @@ VOID Thread_Destroy(VOID)
 	ZeroMemory(&g_Thread_Control,sizeof(Thread_Control));
 }
 
-static DWORD WINAPI ThreadWorker(VOID *pArg)
+DWORD WINAPI ThreadWorker(VOID *pArg)
 {
 	ThreadHandle *pThreadHandle = pArg;
 	*pThreadHandle->ppRet = pThreadHandle->pFn(pThreadHandle->pArg);
