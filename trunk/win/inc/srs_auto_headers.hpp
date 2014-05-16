@@ -15,6 +15,7 @@
 #define SRS_AUTO_USER_CONFIGURE
 #define SRS_AUTO_CONFIGURE
 #define SRS_AUTO_UNAME "modified by hetao.su"
+#define SRS_AUTO_SSL
 //#define SRS_AUTO_HTTP_SERVER
 //#define SRS_AUTO_HTTP_API
 //#define SRS_AUTO_HTTP_PARSER
