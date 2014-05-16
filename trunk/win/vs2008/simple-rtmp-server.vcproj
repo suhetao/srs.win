@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\inc;..\lib;..\lib\IOCP;..\lib\stl;..\lib\myst;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
+				AdditionalIncludeDirectories="..\inc;..\lib;&quot;..\lib\openssl-1.0.1e\inc32&quot;;..\lib\IOCP;..\lib\stl;..\lib\myst;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="false"
 				ExceptionHandling="1"
@@ -117,7 +117,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="..\inc;..\lib;..\lib\IOCP;..\lib\stl;..\lib\myst;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
+				AdditionalIncludeDirectories="..\inc;..\lib;&quot;..\lib\openssl-1.0.1e\inc32&quot;;..\lib\IOCP;..\lib\stl;..\lib\myst;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -136,7 +136,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ws2_32.lib"
+				AdditionalDependencies="ws2_32.lib ..\..\lib\ssleay32.lib ..\..\lib\libeay32.lib"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
