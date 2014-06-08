@@ -123,7 +123,7 @@ APIEXPORT int st_netfd_poll(st_netfd_t fd, int how, st_utime_t timeout);
 APIEXPORT int st_poll(struct pollfd *pds, int npds, st_utime_t timeout);
 APIEXPORT st_netfd_t st_accept(st_netfd_t fd, struct sockaddr *addr, int *addrlen,
                             st_utime_t timeout);
-APIEXPORT int st_connect(st_netfd_t fd, struct sockaddr *addr, int addrlen,
+APIEXPORT int st_connect(st_netfd_t fd, const struct sockaddr *addr, int addrlen,
                       st_utime_t timeout);
 APIEXPORT ssize_t st_read(st_netfd_t fd, void *buf, size_t nbyte,
                        st_utime_t timeout);

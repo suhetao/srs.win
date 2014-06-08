@@ -23,6 +23,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <srs_app_source.hpp>
 
+#include <sstream>
 #include <algorithm>
 using namespace std;
 
@@ -30,7 +31,7 @@ using namespace std;
 #include <srs_protocol_rtmp_stack.hpp>
 #include <srs_core_autofree.hpp>
 #include <srs_protocol_amf0.hpp>
-#include <srs_app_codec.hpp>
+#include <srs_kernel_codec.hpp>
 #include <srs_app_hls.hpp>
 #include <srs_app_forward.hpp>
 #include <srs_app_config.hpp>
@@ -39,6 +40,7 @@ using namespace std;
 #include <srs_app_dvr.hpp>
 #include <srs_kernel_stream.hpp>
 #include <srs_app_edge.hpp>
+#include <srs_kernel_utility.hpp>
 
 #define CONST_MAX_JITTER_MS         500
 #define DEFAULT_FRAME_TIME_MS         40
@@ -199,7 +201,7 @@ void SrsMessageQueue::shrink()
         SrsSharedPtrMessage* msg = msgs[i];
         
         if (msg->header.is_video()) {
-            if (SrsCodec::video_is_keyframe(msg->payload, msg->size)) {
+            if (SrsFlvCodec::video_is_keyframe(msg->payload, msg->size)) {
                 // the max frame index to remove.
                 iframe_index = i;
                 
@@ -248,6 +250,7 @@ SrsConsumer::SrsConsumer(SrsSource* _source)
     paused = false;
     jitter = new SrsRtmpJitter();
     queue = new SrsMessageQueue();
+    should_update_source_id = false;
 }
 
 SrsConsumer::~SrsConsumer()
@@ -260,6 +263,11 @@ SrsConsumer::~SrsConsumer()
 void SrsConsumer::set_queue_size(double queue_size)
 {
     queue->set_queue_size(queue_size);
+}
+
+void SrsConsumer::update_source_id()
+{
+    should_update_source_id = true;
 }
 
 int SrsConsumer::get_time()
@@ -287,6 +295,11 @@ int SrsConsumer::enqueue(SrsSharedPtrMessage* msg, int tba, int tbv)
 
 int SrsConsumer::get_packets(int max_count, SrsSharedPtrMessage**& pmsgs, int& count)
 {
+    if (should_update_source_id) {
+        srs_trace("update source_id=%d", source->source_id());
+        should_update_source_id = false;
+    }
+    
     // paused, return nothing.
     if (paused) {
         return ERROR_SUCCESS;
@@ -350,7 +363,7 @@ int SrsGopCache::cache(SrsSharedPtrMessage* msg)
     }
     
     // clear gop cache when got key frame
-    if (msg->header.is_video() && SrsCodec::video_is_keyframe(msg->payload, msg->size)) {
+    if (msg->header.is_video() && SrsFlvCodec::video_is_keyframe(msg->payload, msg->size)) {
         srs_info("clear gop cache when got keyframe. vcount=%d, count=%d",
             cached_video_count, (int)gop_cache.size());
             
@@ -465,6 +478,7 @@ SrsSource::SrsSource(SrsRequest* req)
     
     frame_rate = sample_rate = 0;
     _can_publish = true;
+    _source_id = -1;
     
     play_edge = new SrsPlayEdge();
     publish_edge = new SrsPublishEdge();
@@ -791,6 +805,31 @@ int SrsSource::on_dvr_request_sh()
     return ret;
 }
 
+int SrsSource::on_source_id_changed(int id)
+{
+    int ret = ERROR_SUCCESS;
+    
+    if (_source_id == id) {
+        return ret;
+    }
+    
+    _source_id = id;
+    
+    // notice all consumer
+    std::vector<SrsConsumer*>::iterator it;
+    for (it = consumers.begin(); it != consumers.end(); ++it) {
+        SrsConsumer* consumer = *it;
+        consumer->update_source_id();
+    }
+    
+    return ret;
+}
+
+int SrsSource::source_id()
+{
+    return _source_id;
+}
+
 bool SrsSource::can_publish()
 {
     return _can_publish;
@@ -813,11 +852,28 @@ int SrsSource::on_meta_data(SrsMessage* msg, SrsOnMetaDataPacket* metadata)
         return ret;
     }
 #endif
+
+    SrsAmf0Any* prop = NULL;
     
+    // generate metadata info to print
+    std::stringstream ss;
+    if ((prop = metadata->metadata->ensure_property_number("width")) != NULL) {
+        ss << ", width=" << (int)prop->to_number();
+    }
+    if ((prop = metadata->metadata->ensure_property_number("height")) != NULL) {
+        ss << ", height=" << (int)prop->to_number();
+    }
+    if ((prop = metadata->metadata->ensure_property_number("videocodecid")) != NULL) {
+        ss << ", vcodec=" << (int)prop->to_number();
+    }
+    if ((prop = metadata->metadata->ensure_property_number("audiocodecid")) != NULL) {
+        ss << ", acodec=" << (int)prop->to_number();
+    }
+    
+    // add server info to metadata
     metadata->metadata->set("server", SrsAmf0Any::str(RTMP_SIG_SRS_KEY" "RTMP_SIG_SRS_VERSION" ("RTMP_SIG_SRS_URL_SHORT")"));
     metadata->metadata->set("authors", SrsAmf0Any::str(RTMP_SIG_SRS_PRIMARY_AUTHROS));
     
-    SrsAmf0Any* prop = NULL;
     if ((prop = metadata->metadata->get_property("audiosamplerate")) != NULL) {
         if (prop->is_number()) {
             sample_rate = (int)prop->to_number();
@@ -875,7 +931,7 @@ int SrsSource::on_meta_data(SrsMessage* msg, SrsOnMetaDataPacket* metadata)
                 return ret;
             }
         }
-        srs_trace("dispatch metadata success.");
+        srs_trace("got metadata%s", ss.str().c_str());
     }
     
     // copy to all forwarders
@@ -956,10 +1012,10 @@ int SrsSource::on_audio(SrsMessage* audio)
 
     // cache the sequence header if h264
     // donot cache the sequence header to gop_cache, return here.
-    if (SrsCodec::audio_is_sequence_header(msg->payload, msg->size)) {
+    if (SrsFlvCodec::audio_is_sequence_header(msg->payload, msg->size)) {
         srs_freep(cache_sh_audio);
         cache_sh_audio = msg->copy();
-        srs_trace("update audio sequence header success. size=%d", msg->header.payload_length);
+        srs_trace("got audio sh, size=%d", msg->header.payload_length);
         return ret;
     }
     
@@ -1046,10 +1102,10 @@ int SrsSource::on_video(SrsMessage* video)
 
     // cache the sequence header if h264
     // donot cache the sequence header to gop_cache, return here.
-    if (SrsCodec::video_is_sequence_header(msg->payload, msg->size)) {
+    if (SrsFlvCodec::video_is_sequence_header(msg->payload, msg->size)) {
         srs_freep(cache_sh_video);
         cache_sh_video = msg->copy();
-        srs_trace("update video sequence header success. size=%d", msg->header.payload_length);
+        srs_trace("got video sh, size=%d", msg->header.payload_length);
         return ret;
     }
 
@@ -1181,6 +1237,10 @@ int SrsSource::on_publish()
     
     _can_publish = false;
     
+    // whatever, the publish thread is the source or edge source,
+    // save its id to srouce id.
+    on_source_id_changed(_srs_context->get_id());
+    
     // create forwarders
     if ((ret = create_forwarders()) != ERROR_SUCCESS) {
         srs_error("create forwarders failed. ret=%d", ret);
@@ -1236,9 +1296,11 @@ void SrsSource::on_unpublish()
     srs_freep(cache_sh_video);
     srs_freep(cache_sh_audio);
     
-    srs_trace("clear cache/metadata/sequence-headers when unpublish.");
+    srs_info("clear cache/metadata/sequence-headers when unpublish.");
+    srs_trace("cleanup when unpublish");
     
     _can_publish = true;
+    _source_id = -1;
 }
 
  int SrsSource::create_consumer(SrsConsumer*& consumer)

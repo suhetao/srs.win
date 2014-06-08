@@ -874,6 +874,11 @@ VOID TEST(AMF0Test, ApiAnyAssert)
         SrsAutoFree(SrsAmf0Any, o);
         EXPECT_TRUE(o->is_ecma_array());
     }
+    if (true) {
+        o = SrsAmf0Any::strict_array();
+        SrsAutoFree(SrsAmf0Any, o);
+        EXPECT_TRUE(o->is_strict_array());
+    }
     
     // empty object
     if (true) {
@@ -891,6 +896,15 @@ VOID TEST(AMF0Test, ApiAnyAssert)
         s.reset();
         EXPECT_EQ(ERROR_SUCCESS, o->write(&s));
         EXPECT_EQ(1+4+3, s.pos());
+    }
+    
+    // strict array
+    if (true) {
+        o = SrsAmf0Any::strict_array();
+        SrsAutoFree(SrsAmf0Any, o);
+        s.reset();
+        EXPECT_EQ(ERROR_SUCCESS, o->write(&s));
+        EXPECT_EQ(1+4, s.pos());
     }
 }
 
@@ -1047,5 +1061,73 @@ VOID TEST(AMF0Test, ApiEcmaArrayProps)
         
         o->set("age", SrsAmf0Any::number(100));
         EXPECT_EQ(2, o->count());
+    }
+}
+
+VOID TEST(AMF0Test, ApiStrictArray)
+{
+    SrsStream s;
+    
+    char buf[1024];
+    memset(buf, 0, sizeof(buf));
+    EXPECT_EQ(ERROR_SUCCESS, s.initialize(buf, sizeof(buf)));
+    
+    SrsAmf0StrictArray* o = NULL;
+    
+    // append property
+    if (true) {
+        o = SrsAmf0Any::strict_array();
+        SrsAutoFree(SrsAmf0StrictArray, o);
+        
+        o->append(SrsAmf0Any::number(100));
+        EXPECT_DOUBLE_EQ(100, o->at(0)->to_number());
+        
+        o->append(SrsAmf0Any::number(101));
+        EXPECT_DOUBLE_EQ(101, o->at(1)->to_number());
+        
+        o->append(SrsAmf0Any::str("winlin"));
+        EXPECT_STREQ("winlin", o->at(2)->to_str().c_str());
+    }
+    
+    // count
+    if (true) {
+        o = SrsAmf0Any::strict_array();
+        SrsAutoFree(SrsAmf0StrictArray, o);
+        
+        EXPECT_EQ(0, o->count());
+        
+        o->append(SrsAmf0Any::boolean());
+        EXPECT_EQ(1, o->count());
+        
+        o->append(SrsAmf0Any::boolean());
+        EXPECT_EQ(2, o->count());
+
+        o->clear();
+        EXPECT_EQ(0, o->count());
+    }
+    
+    // io
+    if (true) {
+        o = SrsAmf0Any::strict_array();
+        SrsAutoFree(SrsAmf0StrictArray, o);
+        
+        s.reset();
+        EXPECT_EQ(ERROR_SUCCESS, o->write(&s));
+        EXPECT_EQ(5, s.pos());
+        
+        s.reset();
+        EXPECT_EQ(0x0a, s.read_1bytes());
+        EXPECT_EQ(0x00, s.read_4bytes());
+    }
+    
+    if (true) {
+        o = SrsAmf0Any::strict_array();
+        SrsAutoFree(SrsAmf0StrictArray, o);
+        
+        o->append(SrsAmf0Any::number(0));
+        
+        s.reset();
+        EXPECT_EQ(ERROR_SUCCESS, o->write(&s));
+        EXPECT_EQ(5 + SrsAmf0Size::number(), s.pos());
     }
 }

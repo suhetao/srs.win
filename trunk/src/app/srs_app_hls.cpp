@@ -35,7 +35,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 using namespace std;
 
 #include <srs_kernel_error.hpp>
-#include <srs_app_codec.hpp>
+#include <srs_kernel_codec.hpp>
 #include <srs_protocol_amf0.hpp>
 #include <srs_protocol_rtmp_stack.hpp>
 #include <srs_app_config.hpp>
@@ -43,6 +43,8 @@ using namespace std;
 #include <srs_core_autofree.hpp>
 #include <srs_protocol_rtmp.hpp>
 #include <srs_app_pithy_print.hpp>
+#include <srs_kernel_utility.hpp>
+#include <srs_app_avc_aac.hpp>
 
 // max PES packets size to flush the video.
 #define SRS_AUTO_HLS_AUDIO_CACHE_SIZE 1024 * 1024
@@ -913,7 +915,8 @@ int SrsHlsMuxer::create_dir()
     // TODO: cleanup the dir when startup.
 
     mode_t mode = S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IWGRP|S_IXGRP|S_IROTH|S_IXOTH;
-    if (::mkdir(app_dir.c_str(), mode) < 0) {
+    //if (::mkdir(app_dir.c_str(), mode) < 0) {
+	if (::mkdir(app_dir.c_str()) < 0) {
         if (errno != EEXIST) {
             ret = ERROR_HLS_CREATE_DIR;
             srs_error("create app dir %s failed. ret=%d", app_dir.c_str(), ret);
@@ -1013,7 +1016,7 @@ int SrsHlsCache::on_sequence_header(SrsHlsMuxer* muxer)
     return muxer->on_sequence_header();
 }
     
-int SrsHlsCache::write_audio(SrsCodec* codec, SrsHlsMuxer* muxer, int64_t pts, SrsCodecSample* sample)
+int SrsHlsCache::write_audio(SrsAvcAacCodec* codec, SrsHlsMuxer* muxer, int64_t pts, SrsCodecSample* sample)
 {
     int ret = ERROR_SUCCESS;
     
@@ -1061,7 +1064,7 @@ int SrsHlsCache::write_audio(SrsCodec* codec, SrsHlsMuxer* muxer, int64_t pts, S
 }
     
 int SrsHlsCache::write_video(
-    SrsCodec* codec, SrsHlsMuxer* muxer, int64_t dts, SrsCodecSample* sample)
+    SrsAvcAacCodec* codec, SrsHlsMuxer* muxer, int64_t dts, SrsCodecSample* sample)
 {
     int ret = ERROR_SUCCESS;
     
@@ -1122,7 +1125,7 @@ int SrsHlsCache::reap_segment(string log_desc, SrsHlsMuxer* muxer, int64_t segme
     return ret;
 }
 
-int SrsHlsCache::cache_audio(SrsCodec* codec, SrsCodecSample* sample)
+int SrsHlsCache::cache_audio(SrsAvcAacCodec* codec, SrsCodecSample* sample)
 {
     int ret = ERROR_SUCCESS;
     
@@ -1189,7 +1192,7 @@ int SrsHlsCache::cache_audio(SrsCodec* codec, SrsCodecSample* sample)
     return ret;
 }
 
-int SrsHlsCache::cache_video(SrsCodec* codec, SrsCodecSample* sample)
+int SrsHlsCache::cache_video(SrsAvcAacCodec* codec, SrsCodecSample* sample)
 {
     int ret = ERROR_SUCCESS;
     
@@ -1261,7 +1264,7 @@ SrsHls::SrsHls(SrsSource* _source)
     hls_enabled = false;
     
     source = _source;
-    codec = new SrsCodec();
+    codec = new SrsAvcAacCodec();
     sample = new SrsCodecSample();
     jitter = new SrsRtmpJitter();
     

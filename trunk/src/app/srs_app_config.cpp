@@ -184,6 +184,14 @@ string SrsConfDirective::arg2()
     return "";
 }
 
+void SrsConfDirective::set_arg0(string value)
+{
+    if (args.size() > 0) {
+        args[0] = value;
+    }
+    args.push_back(value);
+}
+
 SrsConfDirective* SrsConfDirective::at(int index)
 {
     return directives.at(index);
@@ -501,7 +509,7 @@ int SrsConfig::reload()
     //
     // always support reload without additional code:
     //      chunk_size, ff_log_dir, max_connections,
-    //      bandcheck, http_hooks
+    //      bandcheck, http_hooks, heartbeat
 
     // merge config: listen
     if (!srs_directive_equals(root->get("listen"), old_root->get("listen"))) {
@@ -529,38 +537,23 @@ int SrsConfig::reload()
     
     // merge config: srs_log_tank
     if (!srs_directive_equals(root->get("srs_log_tank"), old_root->get("srs_log_tank"))) {
-        for (it = subscribes.begin(); it != subscribes.end(); ++it) {
-            ISrsReloadHandler* subscribe = *it;
-            if ((ret = subscribe->on_reload_log_tank()) != ERROR_SUCCESS) {
-                srs_error("notify subscribes reload srs_log_tank failed. ret=%d", ret);
-                return ret;
-            }
+        if ((ret = force_reload_log_tank()) != ERROR_SUCCESS) {
+            return ret;
         }
-        srs_trace("reload srs_log_tank success.");
     }
     
     // merge config: srs_log_level
     if (!srs_directive_equals(root->get("srs_log_level"), old_root->get("srs_log_level"))) {
-        for (it = subscribes.begin(); it != subscribes.end(); ++it) {
-            ISrsReloadHandler* subscribe = *it;
-            if ((ret = subscribe->on_reload_log_level()) != ERROR_SUCCESS) {
-                srs_error("notify subscribes reload srs_log_level failed. ret=%d", ret);
-                return ret;
-            }
+        if ((ret = force_reload_log_level()) != ERROR_SUCCESS) {
+            return ret;
         }
-        srs_trace("reload srs_log_level success.");
     }
     
     // merge config: srs_log_file
     if (!srs_directive_equals(root->get("srs_log_file"), old_root->get("srs_log_file"))) {
-        for (it = subscribes.begin(); it != subscribes.end(); ++it) {
-            ISrsReloadHandler* subscribe = *it;
-            if ((ret = subscribe->on_reload_log_file()) != ERROR_SUCCESS) {
-                srs_error("notify subscribes reload srs_log_file failed. ret=%d", ret);
-                return ret;
-            }
+        if ((ret = force_reload_log_file()) != ERROR_SUCCESS) {
+            return ret;
         }
-        srs_trace("reload srs_log_file success.");
     }
     
     // merge config: pithy_print
@@ -589,6 +582,117 @@ int SrsConfig::reload()
     if ((ret = reload_vhost(old_root)) != ERROR_SUCCESS) {
         return ret;
     }
+    
+    return ret;
+}
+
+SrsConfDirective* SrsConfig::get_or_create(SrsConfDirective* node, string name)
+{
+    srs_assert(node);
+    
+    SrsConfDirective* conf = node->get(name);
+    
+    if (!conf) {
+        conf = new SrsConfDirective();
+        conf->name = name;
+        node->directives.push_back(conf);
+    }
+    
+    return conf;
+}
+
+bool SrsConfig::set_log_file(string file)
+{
+    if (file == get_log_file()) {
+        return false;
+    }
+    
+    SrsConfDirective* conf = get_or_create(root, "srs_log_file");
+    srs_assert(conf);
+    conf->set_arg0(file);
+    
+    return true;
+}
+
+bool SrsConfig::set_log_tank(string tank)
+{
+    if (get_log_tank_file() && tank != "console") {
+        return false;
+    }
+    if (!get_log_tank_file() && tank == "console") {
+        return false;
+    }
+    
+    SrsConfDirective* conf = get_or_create(root, "srs_log_tank");
+    srs_assert(conf);
+    conf->set_arg0(tank);
+    
+    return true;
+}
+
+bool SrsConfig::set_log_level(string level)
+{
+    if (level == get_log_level()) {
+        return false;
+    }
+    
+    SrsConfDirective* conf = get_or_create(root, "srs_log_level");
+    srs_assert(conf);
+    conf->set_arg0(level);
+    
+    return true;
+}
+
+int SrsConfig::force_reload_log_file()
+{
+    int ret = ERROR_SUCCESS;
+    
+    std::vector<ISrsReloadHandler*>::iterator it;
+    
+    for (it = subscribes.begin(); it != subscribes.end(); ++it) {
+        ISrsReloadHandler* subscribe = *it;
+        if ((ret = subscribe->on_reload_log_file()) != ERROR_SUCCESS) {
+            srs_error("notify subscribes reload srs_log_file failed. ret=%d", ret);
+            return ret;
+        }
+    }
+    srs_trace("reload srs_log_file success.");
+    
+    return ret;
+}
+
+int SrsConfig::force_reload_log_tank()
+{
+    int ret = ERROR_SUCCESS;
+    
+    std::vector<ISrsReloadHandler*>::iterator it;
+    
+    for (it = subscribes.begin(); it != subscribes.end(); ++it) {
+        ISrsReloadHandler* subscribe = *it;
+        if ((ret = subscribe->on_reload_log_tank()) != ERROR_SUCCESS) {
+            srs_error("notify subscribes reload srs_log_tank failed. ret=%d", ret);
+            return ret;
+        }
+    }
+    srs_trace("reload srs_log_tank success.");
+    
+    return ret;
+}
+
+int SrsConfig::force_reload_log_level()
+{
+    int ret = ERROR_SUCCESS;
+    
+    std::vector<ISrsReloadHandler*>::iterator it;
+    
+    for (it = subscribes.begin(); it != subscribes.end(); ++it) {
+        ISrsReloadHandler* subscribe = *it;
+        if ((ret = subscribe->on_reload_log_level()) != ERROR_SUCCESS) {
+            srs_error("notify subscribes reload srs_log_level failed. ret=%d", ret);
+            return ret;
+        }
+    }
+    srs_trace("reload srs_log_level success.");
     
     return ret;
 }
@@ -763,18 +867,6 @@ int SrsConfig::reload_vhost(SrsConfDirective* old_root)
         SrsConfDirective* old_vhost = old_root->get("vhost", vhost);
         SrsConfDirective* new_vhost = root->get("vhost", vhost);
         
-        // mode, never supports reload.
-        // first, for the origin and edge role change is too complex.
-        // second, the vhosts in origin device group normally are all origin,
-        //      they never change to edge sometimes.
-        // third, the origin or upnode device can always be restart,
-        //      edge will retry and the users connected to edge are ok.
-        if (get_vhost_is_edge(old_vhost) != get_vhost_is_edge(new_vhost)) {
-            ret = ERROR_RTMP_EDGE_RELOAD;
-            srs_error("reload never supports mode changed. ret=%d", ret);
-            return ret;
-        }
-        
         //      DISABLED    =>  ENABLED
         if (!get_vhost_enabled(old_vhost) && get_vhost_enabled(new_vhost)) {
             srs_trace("vhost %s added, reload it.", vhost.c_str());
@@ -803,6 +895,19 @@ int SrsConfig::reload_vhost(SrsConfDirective* old_root)
             }
             srs_trace("reload removed vhost %s success.", vhost.c_str());
             continue;
+        }
+        
+        // mode, never supports reload.
+        // first, for the origin and edge role change is too complex.
+        // second, the vhosts in origin device group normally are all origin,
+        //      they never change to edge sometimes.
+        // third, the origin or upnode device can always be restart,
+        //      edge will retry and the users connected to edge are ok.
+        // it's ok to add or remove edge/origin vhost.
+        if (get_vhost_is_edge(old_vhost) != get_vhost_is_edge(new_vhost)) {
+            ret = ERROR_RTMP_EDGE_RELOAD;
+            srs_error("reload never supports mode changed. ret=%d", ret);
+            return ret;
         }
     
         //      ENABLED     =>  ENABLED (modified)
@@ -1171,13 +1276,13 @@ int SrsConfig::parse_file(const char* filename)
     // TODO: check pid.
     
     // check log
-    std::string log_filename = this->get_srs_log_file();
-    if (get_srs_log_tank_file() && log_filename.empty()) {
+    std::string log_filename = this->get_log_file();
+    if (get_log_tank_file() && log_filename.empty()) {
         ret = ERROR_SYSTEM_CONFIG_INVALID;
         srs_error("must specifies the file to write log to. ret=%d", ret);
         return ret;
     }
-    if (get_srs_log_tank_file()) {
+    if (get_log_tank_file()) {
         srs_trace("write log to file %s", log_filename.c_str());
         srs_trace("you can: tailf %s", log_filename.c_str());
         srs_trace("@see: %s", SRS_WIKI_URL_LOG);
@@ -2293,7 +2398,7 @@ string SrsConfig::get_ingest_input_url(SrsConfDirective* ingest)
     return conf->arg0();
 }
 
-string SrsConfig::get_srs_log_file()
+string SrsConfig::get_log_file()
 {
     srs_assert(root);
     
@@ -2303,6 +2408,12 @@ string SrsConfig::get_srs_log_file()
     }
     
     return conf->arg0();
+}
+
+bool SrsConfig::get_ffmpeg_log_enabled()
+{
+    string log = get_ffmpeg_log_dir();
+    return log != "/dev/null";
 }
 
 string SrsConfig::get_ffmpeg_log_dir()
@@ -2317,7 +2428,7 @@ string SrsConfig::get_ffmpeg_log_dir()
     return conf->arg0();
 }
 
-string SrsConfig::get_srs_log_level()
+string SrsConfig::get_log_level()
 {
     srs_assert(root);
     
@@ -2329,7 +2440,7 @@ string SrsConfig::get_srs_log_level()
     return conf->arg0();
 }
 
-bool SrsConfig::get_srs_log_tank_file()
+bool SrsConfig::get_log_tank_file()
 {
     srs_assert(root);
     
@@ -2667,6 +2778,74 @@ string SrsConfig::get_vhost_http_dir(string vhost)
     conf = conf->get("dir");
     if (!conf || conf->arg0().empty()) {
         return SRS_CONF_DEFAULT_HTTP_DIR;
+    }
+    
+    return conf->arg0();
+}
+
+SrsConfDirective* SrsConfig::get_heartbeart()
+{
+    return root->get("heartbeat");
+}
+
+bool SrsConfig::get_heartbeat_enabled()
+{
+    SrsConfDirective* conf = get_heartbeart();
+    
+    if (!conf) {
+        return SRS_CONF_DEFAULT_HTTP_HEAETBEAT_ENABLED;
+    }
+    
+    conf = conf->get("enabled");
+    if (!conf || conf->arg0() != "on") {
+        return SRS_CONF_DEFAULT_HTTP_HEAETBEAT_ENABLED;
+    }
+    
+    return true;
+}
+
+int64_t SrsConfig::get_heartbeat_interval()
+{
+    SrsConfDirective* conf = get_heartbeart();
+    
+    if (!conf) {
+        return (int64_t)(SRS_CONF_DEFAULT_HTTP_HEAETBEAT_INTERVAL * 1000);
+    }
+    conf = conf->get("interval");
+    if (!conf || conf->arg0().empty()) {
+        return (int64_t)(SRS_CONF_DEFAULT_HTTP_HEAETBEAT_INTERVAL * 1000);
+    }
+    
+    return (int64_t)(::atof(conf->arg0().c_str()) * 1000);
+}
+
+string SrsConfig::get_heartbeat_url()
+{
+    SrsConfDirective* conf = get_heartbeart();
+    
+    if (!conf) {
+        return SRS_CONF_DEFAULT_HTTP_HEAETBEAT_URL;
+    }
+    
+    conf = conf->get("url");
+    if (!conf || conf->arg0().empty()) {
+        return SRS_CONF_DEFAULT_HTTP_HEAETBEAT_URL;
+    }
+    
+    return conf->arg0();
+}
+
+string SrsConfig::get_heartbeat_device_id()
+{
+    SrsConfDirective* conf = get_heartbeart();
+    
+    if (!conf) {
+        return "";
+    }
+    
+    conf = conf->get("device_id");
+    if (!conf || conf->arg0().empty()) {
+        return "";
     }
     
     return conf->arg0();

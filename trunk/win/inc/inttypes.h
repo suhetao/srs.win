@@ -79,7 +79,8 @@ extern "C" {
    typedef unsigned short    uint16_t;
    typedef unsigned int      uint32_t;
 #else
-   typedef signed __int8     int8_t;
+   //typedef signed __int8     int8_t;
+	typedef __int8     int8_t;
    typedef signed __int16    int16_t;
    typedef signed __int32    int32_t;
    typedef unsigned __int8   uint8_t;

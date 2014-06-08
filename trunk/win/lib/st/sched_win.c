@@ -515,7 +515,6 @@ void st_thread_interrupt(_st_thread_t *thread)
   _ST_ADD_RUNQ(thread);
 }
 
-
 _st_thread_t *st_thread_create(void *(*start)(void *arg), void *arg,
 			       int joinable, int stk_size)
 {

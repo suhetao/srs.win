@@ -51,7 +51,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define ERROR_SOCKET_WRITE                  209
 #define ERROR_SOCKET_WAIT                   210
 #define ERROR_SOCKET_TIMEOUT                211
-#define ERROR_SOCKET_GET_LOCAL_IP           212
+//#define ERROR_SOCKET_GET_LOCAL_IP           212
 
 #define ERROR_RTMP_PLAIN_REQUIRED           300
 #define ERROR_RTMP_CHUNK_START              301
@@ -117,6 +117,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define ERROR_SYSTEM_FILE_EOF               428
 #define ERROR_SYSTEM_FILE_RENAME            429
 #define ERROR_SYSTEM_CREATE_PIPE            430
+#define ERROR_SYSTEM_FILE_SEEK              431
+#define ERROR_SYSTEM_FLV_HEADER             432
 
 // see librtmp.
 // failed when open ssl create the dh
@@ -183,6 +185,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define ERROR_HTTP_HANDLER_INVALID          804
 #define ERROR_HTTP_OPEN_FILE                805
 #define ERROR_HTTP_READ_FILE                806
+#define ERROR_HTTP_API_LOGS                 807
+#define ERROR_HTTP_FLV_SEQUENCE_HEADER      808
+#define ERROR_HTTP_FLV_OFFSET_OVERFLOW      809
 
 // system control message, 
 // not an error, but special control logic.

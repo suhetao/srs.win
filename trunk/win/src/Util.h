@@ -22,6 +22,8 @@ void *xMemSet(void* pDst, char c, unsigned int len);
 void *xMemMove(void *pDst, const void *pSrc, unsigned int size);
 
 int xStrCmp(char *strSrc, char *strDst);
+char* xStrNCpy(char* strDst, char* strSrc, unsigned int size);
+int xStrNCmp(void *strSrc, void *strDst, unsigned int n);
 
 #ifdef __cplusplus
 }

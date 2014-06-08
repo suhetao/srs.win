@@ -5,6 +5,7 @@
 #include <io.h>
 #include <process.h>
 
+#define mkdir _mkdir
 #define getpid _getpid
 #define getcwd _getcwd
 

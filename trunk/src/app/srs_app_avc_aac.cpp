@@ -21,15 +21,14 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <srs_app_codec.hpp>
+#include <srs_app_avc_aac.hpp>
 
-#include <string.h>
 #include <stdlib.h>
 
 #include <srs_kernel_error.hpp>
-#include <srs_kernel_stream.hpp>
 #include <srs_kernel_log.hpp>
-#include <srs_core_autofree.hpp>
+#include <srs_kernel_codec.hpp>
+#include <srs_kernel_stream.hpp>
 
 SrsCodecBuffer::SrsCodecBuffer()
 {
@@ -95,7 +94,7 @@ int SrsCodecSample::add_sample(char* bytes, int size)
     return ret;
 }
 
-SrsCodec::SrsCodec()
+SrsAvcAacCodec::SrsAvcAacCodec()
 {
     width                     = 0;
     height                     = 0;
@@ -123,7 +122,7 @@ SrsCodec::SrsCodec()
     stream = new SrsStream();
 }
 
-SrsCodec::~SrsCodec()
+SrsAvcAacCodec::~SrsAvcAacCodec()
 {
     srs_freep(avc_extra_data);
     srs_freep(aac_extra_data);
@@ -133,7 +132,7 @@ SrsCodec::~SrsCodec()
     srs_freep(pictureParameterSetNALUnit);
 }
 
-int SrsCodec::audio_aac_demux(int8_t* data, int size, SrsCodecSample* sample)
+int SrsAvcAacCodec::audio_aac_demux(int8_t* data, int size, SrsCodecSample* sample)
 {
     int ret = ERROR_SUCCESS;
     
@@ -268,7 +267,7 @@ int SrsCodec::audio_aac_demux(int8_t* data, int size, SrsCodecSample* sample)
     return ret;
 }
 
-int SrsCodec::video_avc_demux(int8_t* data, int size, SrsCodecSample* sample)
+int SrsAvcAacCodec::video_avc_demux(int8_t* data, int size, SrsCodecSample* sample)
 {
     int ret = ERROR_SUCCESS;
     
@@ -451,81 +450,4 @@ int SrsCodec::video_avc_demux(int8_t* data, int size, SrsCodecSample* sample)
         frame_type, video_codec_id, avc_packet_type, composition_time, size);
     
     return ret;
-}
-
-bool SrsCodec::video_is_keyframe(int8_t* data, int size)
-{
-    // 2bytes required.
-    if (size < 1) {
-        return false;
-    }
-
-    char frame_type = *(char*)data;
-    frame_type = (frame_type >> 4) & 0x0F;
-    
-    return frame_type == SrsCodecVideoAVCFrameKeyFrame;
-}
-
-bool SrsCodec::video_is_sequence_header(int8_t* data, int size)
-{
-    // sequence header only for h264
-    if (!video_is_h264(data, size)) {
-        return false;
-    }
-    
-    // 2bytes required.
-    if (size < 2) {
-        return false;
-    }
-
-    char frame_type = *(char*)data;
-    frame_type = (frame_type >> 4) & 0x0F;
-
-    char avc_packet_type = *(char*)(data + 1);
-    
-    return frame_type == SrsCodecVideoAVCFrameKeyFrame 
-        && avc_packet_type == SrsCodecVideoAVCTypeSequenceHeader;
-}
-
-bool SrsCodec::audio_is_sequence_header(int8_t* data, int size)
-{
-    // sequence header only for aac
-    if (!audio_is_aac(data, size)) {
-        return false;
-    }
-    
-    // 2bytes required.
-    if (size < 2) {
-        return false;
-    }
-    
-    char aac_packet_type = *(char*)(data + 1);
-    
-    return aac_packet_type == SrsCodecAudioTypeSequenceHeader;
-}
-
-bool SrsCodec::video_is_h264(int8_t* data, int size)
-{
-    // 1bytes required.
-    if (size < 1) {
-        return false;
-    }
-
-    char codec_id = *(char*)data;
-    codec_id = codec_id & 0x0F;
-    
-    return codec_id == SrsCodecVideoAVC;
-}
-
-bool SrsCodec::audio_is_aac(int8_t* data, int size)
-{
-    // 1bytes required.
-    if (size < 1) {
-        return false;
-    }
-    
-    char sound_format = *(char*)data;
-    sound_format = (sound_format >> 4) & 0x0F;
-    
-    return sound_format == SrsCodecAudioAAC;
 }

@@ -66,14 +66,6 @@ void srs_rtmp_destroy(srs_rtmp_t rtmp);
 * not depends on ssl.
 */
 int srs_simple_handshake(srs_rtmp_t rtmp);
-/**
-* complex handshake is specified by adobe Flash player,
-* depends on ssl, user must compile srs with ssl, then
-* link user program libssl.a and libcrypt.a
-* @remark user can use srs_ssl_enabled() to detect 
-* whether ssl is ok.
-*/
-int srs_complex_handshake(srs_rtmp_t rtmp);
 
 /**
 * connect to rtmp vhost/app
@@ -117,6 +109,8 @@ int srs_publish_stream(srs_rtmp_t rtmp);
 *     SRS_RTMP_TYPE_VIDEO to "Video"
 *     SRS_RTMP_TYPE_SCRIPT to "Data"
 *     otherwise, "Unknown"
+* @remark user never free the return char*, 
+*   it's static shared const string.
 */
 const char* srs_type2string(int type);
 /**
@@ -140,19 +134,106 @@ int srs_read_packet(srs_rtmp_t rtmp, int* type, u_int32_t* timestamp, char** dat
 int srs_write_packet(srs_rtmp_t rtmp, int type, u_int32_t timestamp, char* data, int size);
 
 /**
-* whether srs is compiled with ssl,
-* that is, compile srs with ssl: ./configure --with-ssl,.
-* if no ssl, complex handshake always error.
-* @return 0 for false, otherwise, true.
-*/
-int srs_ssl_enabled();
-
-/**
 * get protocol stack version
 */
 int srs_version_major();
 int srs_version_minor();
 int srs_version_revision();
+
+/**
+* utilities
+*/
+int64_t srs_get_time_ms();
+
+/**
+* flv codec
+*/
+typedef void* srs_flv_t;
+typedef int flv_bool;
+srs_flv_t srs_flv_open_read(const char* file);
+srs_flv_t srs_flv_open_write(const char* file);
+void srs_flv_close(srs_flv_t flv);
+/* read the flv header. 9bytes header. drop the 4bytes zero previous tag size */
+int srs_flv_read_header(srs_flv_t flv, char header[9]);
+/* read the flv tag header, 1bytes tag, 3bytes data_size, 4bytes time, 3bytes stream id. */
+int srs_flv_read_tag_header(srs_flv_t flv, char* ptype, int32_t* pdata_size, u_int32_t* ptime);
+/* read the tag data. drop the 4bytes previous tag size */
+int srs_flv_read_tag_data(srs_flv_t flv, char* data, int32_t size);
+/* write flv header to file, auto write the 4bytes zero previous tag size. */
+int srs_flv_write_header(srs_flv_t flv, char header[9]);
+/* write flv tag to file, auto write the 4bytes previous tag size */
+int srs_flv_write_tag(srs_flv_t flv, char type, int32_t time, char* data, int size);
+/* get the tag size, for flv injecter to adjust offset, size=tag_header+data+previous_tag */
+int srs_flv_size_tag(int data_size);
+/* file stream */
+/* file stream tellg to get offset */
+int64_t srs_flv_tellg(srs_flv_t flv);
+/* seek file stream, offset is form the start of file */
+void srs_flv_lseek(srs_flv_t flv, int64_t offset);
+/* error code */
+/* whether the error code indicates EOF */
+flv_bool srs_flv_is_eof(int error_code);
+/* media codec */
+/* whether the video body is sequence header */
+flv_bool srs_flv_is_sequence_header(char* data, int32_t size);
+/* whether the video body is keyframe */
+flv_bool srs_flv_is_keyframe(char* data, int32_t size);
+
+/**
+* amf0 codec
+*/
+/* the output handler. */
+typedef void* srs_amf0_t;
+typedef int amf0_bool;
+typedef double amf0_number;
+srs_amf0_t srs_amf0_parse(char* data, int size, int* nparsed);
+srs_amf0_t srs_amf0_create_number(amf0_number value);
+srs_amf0_t srs_amf0_create_ecma_array();
+srs_amf0_t srs_amf0_create_strict_array();
+srs_amf0_t srs_amf0_create_object();
+void srs_amf0_free(srs_amf0_t amf0);
+void srs_amf0_free_bytes(char* data);
+/* size and to bytes */
+int srs_amf0_size(srs_amf0_t amf0);
+int srs_amf0_serialize(srs_amf0_t amf0, char* data, int size);
+/* type detecter */
+amf0_bool srs_amf0_is_string(srs_amf0_t amf0);
+amf0_bool srs_amf0_is_boolean(srs_amf0_t amf0);
+amf0_bool srs_amf0_is_number(srs_amf0_t amf0);
+amf0_bool srs_amf0_is_null(srs_amf0_t amf0);
+amf0_bool srs_amf0_is_object(srs_amf0_t amf0);
+amf0_bool srs_amf0_is_ecma_array(srs_amf0_t amf0);
+amf0_bool srs_amf0_is_strict_array(srs_amf0_t amf0);
+/* value converter */
+const char* srs_amf0_to_string(srs_amf0_t amf0);
+amf0_bool srs_amf0_to_boolean(srs_amf0_t amf0);
+amf0_number srs_amf0_to_number(srs_amf0_t amf0);
+/* value setter */
+void srs_amf0_set_number(srs_amf0_t amf0, amf0_number value);
+/* object value converter */
+int srs_amf0_object_property_count(srs_amf0_t amf0);
+const char* srs_amf0_object_property_name_at(srs_amf0_t amf0, int index);
+srs_amf0_t srs_amf0_object_property_value_at(srs_amf0_t amf0, int index);
+srs_amf0_t srs_amf0_object_property(srs_amf0_t amf0, const char* name);
+void srs_amf0_object_property_set(srs_amf0_t amf0, const char* name, srs_amf0_t value);
+void srs_amf0_object_clear(srs_amf0_t amf0);
+/* ecma array value converter */
+int srs_amf0_ecma_array_property_count(srs_amf0_t amf0);
+const char* srs_amf0_ecma_array_property_name_at(srs_amf0_t amf0, int index);
+srs_amf0_t srs_amf0_ecma_array_property_value_at(srs_amf0_t amf0, int index);
+srs_amf0_t srs_amf0_ecma_array_property(srs_amf0_t amf0, const char* name);
+void srs_amf0_ecma_array_property_set(srs_amf0_t amf0, const char* name, srs_amf0_t value);
+/* strict array value converter */
+int srs_amf0_strict_array_property_count(srs_amf0_t amf0);
+srs_amf0_t srs_amf0_strict_array_property_at(srs_amf0_t amf0, int index);
+void srs_amf0_strict_array_append(srs_amf0_t amf0, srs_amf0_t value);
+/**
+* human readable print 
+* @param pdata, output the heap data, 
+* user must use srs_amf0_free_bytes to free it.
+* @return return the *pdata for print.
+*/
+char* srs_amf0_human_print(srs_amf0_t amf0, char** pdata, int* psize);
 
 #ifdef __cplusplus
 }

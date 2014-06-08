@@ -35,6 +35,7 @@ using namespace std;
 #include <srs_app_http_api.hpp>
 #include <srs_app_http_conn.hpp>
 #include <srs_app_json.hpp>
+#include <srs_kernel_utility.hpp>
 
 #define SRS_DEFAULT_HTTP_PORT 80
 
@@ -134,6 +135,17 @@ int SrsHttpHandler::do_process_request(SrsSocket* /*skt*/, SrsHttpMessage* /*req
     return ret;
 }
 
+int SrsHttpHandler::response_error(SrsSocket* skt, SrsHttpMessage* req, int code, string desc)
+{
+    std::stringstream ss;
+    ss << JOBJECT_START
+        << JFIELD_ERROR(code) << JFIELD_CONT
+        << JFIELD_STR("desc", desc)
+        << JOBJECT_END;
+    
+    return res_json(skt, req, ss.str());
+}
+
 int SrsHttpHandler::best_match(const char* path, int length, SrsHttpHandlerMatch** ppmatch)
 {
     int ret = ERROR_SUCCESS;
@@ -206,7 +218,7 @@ int SrsHttpHandler::best_match(const char* path, int length, SrsHttpHandlerMatch
 SrsHttpHandler* SrsHttpHandler::res_status_line(stringstream& ss)
 {
     ss << "HTTP/1.1 200 OK " << __CRLF
-       << "Server: SRS/"RTMP_SIG_SRS_VERSION"" << __CRLF;
+       << "Server: "RTMP_SIG_SRS_KEY"/"RTMP_SIG_SRS_VERSION"" << __CRLF;
     return this;
 }
 
@@ -280,6 +292,13 @@ SrsHttpHandler* SrsHttpHandler::res_content_type_mpegts(stringstream& ss)
     return this;
 }
 
+SrsHttpHandler* SrsHttpHandler::res_content_type_flv(stringstream& ss)
+{
+    ss << "Content-Type: video/x-flv" << __CRLF
+        << "Allow: DELETE, GET, HEAD, OPTIONS, POST, PUT" << __CRLF;
+    return this;
+}
+
 SrsHttpHandler* SrsHttpHandler::res_content_length(stringstream& ss, int64_t length)
 {
     ss << "Content-Length: "<< length << __CRLF;
@@ -310,7 +329,7 @@ SrsHttpHandler* SrsHttpHandler::res_body(stringstream& ss, string body)
 
 int SrsHttpHandler::res_flush(SrsSocket* skt, stringstream& ss)
 {
-    return skt->write(ss.str().c_str(), ss.str().length(), NULL);
+    return skt->write((void*)ss.str().c_str(), ss.str().length(), NULL);
 }
 
 int SrsHttpHandler::res_options(SrsSocket* skt)
@@ -534,7 +553,7 @@ char* SrsHttpMessage::http_ts_send_buffer()
 void SrsHttpMessage::reset()
 {
     _state = SrsHttpParseStateInit;
-    _body->clear();
+    _body->erase(_body->length());
     _url = "";
 }
 
@@ -566,9 +585,72 @@ u_int8_t SrsHttpMessage::method()
     return (u_int8_t)_header.method;
 }
 
+string SrsHttpMessage::method_str()
+{
+    if (is_http_get()) {
+        return "GET";
+    }
+    if (is_http_put()) {
+        return "PUT";
+    }
+    if (is_http_post()) {
+        return "POST";
+    }
+    if (is_http_delete()) {
+        return "DELETE";
+    }
+    if (is_http_options()) {
+        return "OPTIONS";
+    }
+    
+    return "OTHER";
+}
+
+bool SrsHttpMessage::is_http_get()
+{
+    return _header.method == HTTP_GET;
+}
+
+bool SrsHttpMessage::is_http_put()
+{
+    return _header.method == HTTP_PUT;
+}
+
+bool SrsHttpMessage::is_http_post()
+{
+    return _header.method == HTTP_POST;
+}
+
+bool SrsHttpMessage::is_http_delete()
+{
+    return _header.method == HTTP_DELETE;
+}
+
+bool SrsHttpMessage::is_http_options()
+{
+    return _header.method == HTTP_OPTIONS;
+}
+
+string SrsHttpMessage::uri()
+{
+    std::string uri = _uri->get_schema();
+    if (uri.empty()) {
+        uri += "http://";
+    }
+    
+    uri += host();
+    uri += path();
+    return uri;
+}
+
 string SrsHttpMessage::url()
 {
     return _uri->get_url();
+}
+
+string SrsHttpMessage::host()
+{
+    return get_request_header("Host");
 }
 
 string SrsHttpMessage::path()
@@ -585,16 +667,21 @@ string SrsHttpMessage::body()
 {
     std::string b;
     
-    if (_body && !_body->empty()) {
-        b.append(_body->bytes(), _body->size());
+    if (_body && _body->length() > 0) {
+        b.append(_body->bytes(), _body->length());
     }
     
     return b;
 }
 
+char* SrsHttpMessage::body_raw()
+{
+    return _body? _body->bytes() : NULL;
+}
+
 int64_t SrsHttpMessage::body_size()
 {
-    return (int64_t)_body->size();
+    return (int64_t)_body->length();
 }
 
 int64_t SrsHttpMessage::content_length()
@@ -643,6 +730,68 @@ void SrsHttpMessage::append_body(const char* body, int length)
     _body->append(body, length);
 }
 
+string SrsHttpMessage::query_get(string key)
+{
+    std::string q = query();
+    size_t pos = std::string::npos;
+    
+    // must format as key=value&...&keyN=valueN
+    if ((pos = key.find("=")) != key.length() - 1) {
+        key = key + "=";
+    }
+    
+    if ((pos = q.find(key)) == std::string::npos) {
+        return "";
+    }
+    
+    std::string v = q.substr(pos + key.length());
+    if ((pos = v.find("&")) != std::string::npos) {
+        v = v.substr(0, pos);
+    }
+    
+    return v;
+}
+
+int SrsHttpMessage::request_header_count()
+{
+    return (int)headers.size();
+}
+
+string SrsHttpMessage::request_header_key_at(int index)
+{
+    srs_assert(index < request_header_count());
+    SrsHttpHeaderField item = headers[index];
+    return item.first;
+}
+
+string SrsHttpMessage::request_header_value_at(int index)
+{
+    srs_assert(index < request_header_count());
+    SrsHttpHeaderField item = headers[index];
+    return item.second;
+}
+
+void SrsHttpMessage::set_request_header(string key, string value)
+{
+    headers.push_back(std::make_pair(key, value));
+}
+
+string SrsHttpMessage::get_request_header(string name)
+{
+    std::vector<SrsHttpHeaderField>::iterator it;
+    
+    for (it = headers.begin(); it != headers.end(); ++it) {
+        SrsHttpHeaderField& elem = *it;
+        std::string key = elem.first;
+        std::string value = elem.second;
+        if (key == name) {
+            return value;
+        }
+    }
+    
+    return "";
+}
+
 SrsHttpParser::SrsHttpParser()
 {
     msg = NULL;
@@ -682,6 +831,9 @@ int SrsHttpParser::parse_message(SrsSocket* skt, SrsHttpMessage** ppmsg)
     // the msg must be always NULL
     srs_assert(msg == NULL);
     msg = new SrsHttpMessage();
+    
+    // reset request data.
+    filed_name = "";
     
     // reset response header.
     msg->reset();
@@ -787,14 +939,34 @@ int SrsHttpParser::on_url(http_parser* parser, const char* at, size_t length)
     return 0;
 }
 
-int SrsHttpParser::on_header_field(http_parser* /*parser*/, const char* at, size_t length)
+int SrsHttpParser::on_header_field(http_parser* parser, const char* at, size_t length)
 {
+    SrsHttpParser* obj = (SrsHttpParser*)parser->data;
+    
+    if (length > 0) {
+        srs_assert(obj);
+        obj->filed_name.append(at, (int)length);
+    }
+    
     srs_info("Header field: %.*s", (int)length, at);
     return 0;
 }
 
-int SrsHttpParser::on_header_value(http_parser* /*parser*/, const char* at, size_t length)
+int SrsHttpParser::on_header_value(http_parser* parser, const char* at, size_t length)
 {
+    SrsHttpParser* obj = (SrsHttpParser*)parser->data;
+    
+    if (length > 0) {
+        srs_assert(obj);
+        srs_assert(obj->msg);
+        
+        std::string field_value;
+        field_value.append(at, (int)length);
+
+        obj->msg->set_request_header(obj->filed_name, field_value);
+        obj->filed_name = "";
+    }
+    
     srs_info("Header value: %.*s", (int)length, at);
     return 0;
 }
@@ -888,7 +1060,7 @@ const char* SrsHttpUri::get_path()
 
 const char* SrsHttpUri::get_query()
 {
-    return path.data();
+    return query.data();
 }
 
 string SrsHttpUri::get_uri_field(string uri, http_parser_url* hp_u, http_parser_url_fields field)

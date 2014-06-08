@@ -12,6 +12,12 @@
 #define open _open
 #define read _read
 #define write _write
+#define unlink _unlink
+#define access _access
+
+#define F_OK 0 
+#define W_OK 2
+#define R_OK 4 
 
 #if !defined(snprintf)
 #define snprintf  _snprintf
@@ -30,8 +36,11 @@
 #define S_ISGID 0
 #define S_IROTH 0
 #define S_IXOTH 0
-#define S_IRUSR 0
-#define S_IWUSR 0
+
+#define	S_IRWXU	0000700			/* RWX mask for owner */
+#define	S_IRUSR	0000400			/* R for owner */
+#define	S_IWUSR	0000200			/* W for owner */
+#define	S_IXUSR	0000100			/* X for owner */
 
 #define SIGHUP 1
 #define SIGQUIT 3

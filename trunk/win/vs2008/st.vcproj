@@ -43,6 +43,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
+				AdditionalIncludeDirectories="..\inc"
 				PreprocessorDefinitions="WIN32;_DEBUG;_LIB"
 				MinimalRebuild="true"
 				ExceptionHandling="1"
@@ -120,7 +121,8 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				PreprocessorDefinitions="MALLOC_STACK;WIN32;_LIB"
+				AdditionalIncludeDirectories="..\inc"
+				PreprocessorDefinitions="WIN32;_LIB"
 				StringPooling="true"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -188,6 +190,10 @@
 			</File>
 			<File
 				RelativePath="..\lib\st\sched_win.c"
+				>
+			</File>
+			<File
+				RelativePath="..\lib\st\setjmp.c"
 				>
 			</File>
 			<File

@@ -43,6 +43,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <srs_core_autofree.hpp>
 #include <srs_app_socket.hpp>
 #include <srs_app_kbps.hpp>
+#include <srs_kernel_utility.hpp>
 
 // when error, edge ingester sleep for a while and retry.
 #define SRS_EDGE_INGESTER_SLEEP_US (int64_t)(1*1000*1000LL)
@@ -69,7 +70,7 @@ SrsEdgeIngester::SrsEdgeIngester()
     origin_index = 0;
     stream_id = 0;
     stfd = NULL;
-    pthread = new SrsThread(this, SRS_EDGE_INGESTER_SLEEP_US);
+    pthread = new SrsThread(this, SRS_EDGE_INGESTER_SLEEP_US, true);
 }
 
 SrsEdgeIngester::~SrsEdgeIngester()
@@ -105,6 +106,9 @@ void SrsEdgeIngester::stop()
     srs_freep(client);
     srs_freep(io);
     kbps->set_io(NULL, NULL);
+    
+    // notice to unpublish.
+    _source->on_unpublish();
 }
 
 int SrsEdgeIngester::cycle()
@@ -149,8 +153,10 @@ int SrsEdgeIngester::cycle()
         return ret;
     }
     
-    if ((ret = ingest()) != ERROR_SUCCESS) {
-        return ret;
+    ret = ingest();
+    if (srs_is_client_gracefully_close(ret)) {
+        srs_warn("origin disconnected, retry. ret=%d", ret);
+        ret = ERROR_SUCCESS;
     }
     
     return ret;
@@ -183,7 +189,9 @@ int SrsEdgeIngester::ingest()
         // read from client.
         SrsMessage* msg = NULL;
         if ((ret = client->recv_message(&msg)) != ERROR_SUCCESS) {
-            srs_error("ingest recv origin server message failed. ret=%d", ret);
+            if (!srs_is_client_gracefully_close(ret)) {
+                srs_error("ingest recv origin server message failed. ret=%d", ret);
+            }
             return ret;
         }
         srs_verbose("edge loop recv message. ret=%d", ret);
@@ -283,11 +291,8 @@ int SrsEdgeIngester::connect_server()
         server = server.substr(0, pos);
         port = ::atoi(s_port.c_str());
     }
-    
-    // open socket.
-    srs_trace("connect edge stream=%s, tcUrl=%s to server=%s, port=%d",
-        _req->stream.c_str(), _req->tcUrl.c_str(), server.c_str(), port);
 
+    // open socket.
     // TODO: FIXME: extract utility method
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if(sock == -1){
@@ -324,12 +329,15 @@ int SrsEdgeIngester::connect_server()
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = inet_addr(ip.c_str());
     
-    if (st_connect(stfd, (const struct sockaddr*)&addr, sizeof(sockaddr_in), ST_UTIME_NO_TIMEOUT) == -1){
+    if (st_connect(stfd, (const struct sockaddr*)&addr, sizeof(sockaddr_in), SRS_EDGE_INGESTER_TIMEOUT_US) == -1){
         ret = ERROR_ST_CONNECT;
         srs_error("connect to server error. ip=%s, port=%d, ret=%d", ip.c_str(), port, ret);
         return ret;
     }
-    srs_trace("connect to server success. server=%s, ip=%s, port=%d", server.c_str(), ip.c_str(), port);
+    srs_info("connect to server success. server=%s, ip=%s, port=%d", server.c_str(), ip.c_str(), port);
+    
+    srs_trace("edge connected, can_publish=%d, url=%s/%s, server=%s:%d",
+        _source->can_publish(), _req->tcUrl.c_str(), _req->stream.c_str(), server.c_str(), port);
     
     return ret;
 }
@@ -344,7 +352,7 @@ SrsEdgeForwarder::SrsEdgeForwarder()
     origin_index = 0;
     stream_id = 0;
     stfd = NULL;
-    pthread = new SrsThread(this, SRS_EDGE_FORWARDER_SLEEP_US);
+    pthread = new SrsThread(this, SRS_EDGE_FORWARDER_SLEEP_US, true);
     queue = new SrsMessageQueue();
     send_error_code = ERROR_SUCCESS;
 }
@@ -491,7 +499,7 @@ int SrsEdgeForwarder::cycle()
             srs_assert(msg);
             msgs[i] = NULL;
             
-            if ((ret = client->send_and_free_message(msg)) != ERROR_SUCCESS) {
+            if ((ret = client->send_and_free_message(msg, stream_id)) != ERROR_SUCCESS) {
                 srs_error("edge publish forwarder send message to server failed. ret=%d", ret);
                 return ret;
             }
@@ -605,7 +613,7 @@ int SrsEdgeForwarder::connect_server()
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = inet_addr(ip.c_str());
     
-    if (st_connect(stfd, (const struct sockaddr*)&addr, sizeof(sockaddr_in), ST_UTIME_NO_TIMEOUT) == -1){
+    if (st_connect(stfd, (const struct sockaddr*)&addr, sizeof(sockaddr_in), SRS_EDGE_FORWARDER_TIMEOUT_US) == -1){
         ret = ERROR_ST_CONNECT;
         srs_error("connect to server error. ip=%s, port=%d, ret=%d", ip.c_str(), port, ret);
         return ret;

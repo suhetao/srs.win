@@ -32,6 +32,10 @@ void srs_close_stfd(st_netfd_t& stfd)
         
         // st does not close it sometimes, 
         // close it manually.
+#ifndef WIN32
         close(fd);
+#else
+		closesocket(fd);
+#endif
     }
 }

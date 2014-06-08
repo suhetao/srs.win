@@ -90,8 +90,9 @@ class SrsChunkStream;
 class SrsProtocol
 {
 private:
-    struct AckWindowSize
+    class AckWindowSize
     {
+    public:
         int ack_window_size;
         int64_t acked_size;
         
@@ -160,8 +161,9 @@ public:
     * user must never free or use the msg after this method,
     * for it will always free the msg.
     * @param msg, the msg to send out, never be NULL.
+    * @param stream_id, the stream id of packet to send over, 0 for control message.
     */
-    virtual int send_and_free_message(SrsMessage* msg);
+    virtual int send_and_free_message(SrsMessage* msg, int stream_id);
     /**
     * send the RTMP packet and always free it.
     * user must never free or use the packet after this method,
@@ -221,8 +223,9 @@ private:
 /**
 * 4.1. Message Header
 */
-struct SrsMessageHeader
+class SrsMessageHeader
 {
+public:
     /**
     * One byte field to represent the message type. A range of type IDs
     * (1-7) are reserved for protocol control messages.
@@ -275,6 +278,7 @@ public:
     bool is_ackledgement();
     bool is_set_chunk_size();
     bool is_user_control_message();
+    bool is_set_peer_bandwidth();
     bool is_aggregate();
     
     void initialize_amf0_script(int size, int stream);
@@ -370,8 +374,9 @@ public:
 class SrsSharedPtrMessage : public SrsMessage
 {
 private:
-    struct __SrsSharedPtr
+    class __SrsSharedPtr
     {
+    public:
         char* payload;
         int size;
         int shared_count;

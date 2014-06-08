@@ -138,3 +138,40 @@ int xStrCmp(char *strSrc, char *strDst)
 	while(TRUE);
 	return result;
 }
+
+char* xStrNCpy(char* strDst, char* strSrc, unsigned int size)
+{
+	char *dst = strDst;
+	char *src = strSrc;
+	char ch;
+
+	if (!size){
+		return NULL;
+	}
+
+	while (size) {
+		size--;
+		*dst++ = ch = *src++;
+		if (!ch)
+			break;
+	}
+
+	xMemSet(dst, 0, size);
+	return dst;
+}
+
+int xStrNCmp(void *strSrc, void *strDst, unsigned int n)
+{
+	unsigned char *src = (unsigned char *)strSrc;
+	unsigned char *dst = (unsigned char *)strDst;
+	unsigned char ch;
+	int d = 0;
+
+	while (n--) {
+		d = (int)(ch = *src++) - (int)*dst++;
+		if (d || !ch)
+			break;
+	}
+
+	return d;
+}

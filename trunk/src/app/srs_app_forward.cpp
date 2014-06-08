@@ -40,6 +40,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <srs_protocol_utility.hpp>
 #include <srs_protocol_rtmp.hpp>
 #include <srs_app_kbps.hpp>
+#include <srs_kernel_utility.hpp>
 
 // when error, forwarder sleep for a while and retry.
 #define SRS_FORWARDER_SLEEP_US (int64_t)(3*1000*1000LL)
@@ -54,7 +55,7 @@ SrsForwarder::SrsForwarder(SrsSource* _source)
     kbps = new SrsKbps();
     stream_id = 0;
 
-    pthread = new SrsThread(this, SRS_FORWARDER_SLEEP_US);
+    pthread = new SrsThread(this, SRS_FORWARDER_SLEEP_US, true);
     queue = new SrsMessageQueue();
     jitter = new SrsRtmpJitter();
 }
@@ -99,7 +100,11 @@ int SrsForwarder::on_publish(SrsRequest* req, std::string forward_server)
     
     // generate tcUrl
     tc_url = "rtmp://";
-    tc_url += vhost;
+    if (vhost == RTMP_VHOST_DEFAULT) {
+        tc_url += forward_server;
+    } else {
+        tc_url += vhost;
+    }
     tc_url += "/";
     tc_url += req->app;
     
@@ -128,7 +133,7 @@ int SrsForwarder::on_publish(SrsRequest* req, std::string forward_server)
             source_ep.c_str(), dest_ep.c_str(), ret);
         return ret;
     }
-    srs_trace("start forward %s to %s, stream: %s/%s", 
+    srs_trace("start forward %s to %s, tcUrl=%s, stream=%s", 
         source_ep.c_str(), dest_ep.c_str(), tc_url.c_str(), 
         stream_name.c_str());
     
@@ -294,7 +299,7 @@ int SrsForwarder::connect_server()
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = inet_addr(ip.c_str());
     
-    if (st_connect(stfd, (const struct sockaddr*)&addr, sizeof(sockaddr_in), ST_UTIME_NO_TIMEOUT) == -1){
+    if (st_connect(stfd, (const struct sockaddr*)&addr, sizeof(sockaddr_in), SRS_FORWARDER_SLEEP_US) == -1){
         ret = ERROR_ST_CONNECT;
         srs_error("connect to server error. ip=%s, port=%d, ret=%d", ip.c_str(), port, ret);
         return ret;
@@ -366,7 +371,7 @@ int SrsForwarder::forward()
             srs_assert(msg);
             msgs[i] = NULL;
             
-            if ((ret = client->send_and_free_message(msg)) != ERROR_SUCCESS) {
+            if ((ret = client->send_and_free_message(msg, stream_id)) != ERROR_SUCCESS) {
                 srs_error("forwarder send message to server failed. ret=%d", ret);
                 return ret;
             }

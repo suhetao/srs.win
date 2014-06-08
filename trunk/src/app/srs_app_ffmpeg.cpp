@@ -30,6 +30,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <signal.h>
 #include <sys/types.h>
 
+#ifdef WIN32
+#include <iostream>
+#endif
+
 using namespace std;
 
 #include <srs_kernel_error.hpp>

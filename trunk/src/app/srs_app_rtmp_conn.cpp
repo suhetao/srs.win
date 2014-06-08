@@ -44,6 +44,7 @@ using namespace std;
 #include <srs_app_http_hooks.hpp>
 #include <srs_app_edge.hpp>
 #include <srs_app_kbps.hpp>
+#include <srs_app_utility.hpp>
 
 // when stream is busy, for example, streaming is already
 // publishing, when a new client to request to publish,
@@ -98,11 +99,7 @@ int SrsRtmpConn::do_cycle()
 {
     int ret = ERROR_SUCCESS;
     
-    if ((ret = get_peer_ip()) != ERROR_SUCCESS) {
-        srs_error("get peer ip failed. ret=%d", ret);
-        return ret;
-    }
-    srs_trace("serve client, peer ip=%s", ip);
+    srs_trace("RTMP client ip=%s", ip.c_str());
 
     rtmp->set_recv_timeout(SRS_RECV_TIMEOUT_US);
     rtmp->set_send_timeout(SRS_SEND_TIMEOUT_US);
@@ -143,7 +140,7 @@ int SrsRtmpConn::do_cycle()
     }
     srs_verbose("check vhost success.");
     
-    srs_trace("rtmp connect app success. "
+    srs_trace("connect app, "
         "tcUrl=%s, pageUrl=%s, swfUrl=%s, schema=%s, vhost=%s, port=%s, app=%s", 
         req->tcUrl.c_str(), req->pageUrl.c_str(), req->swfUrl.c_str(), 
         req->schema.c_str(), req->vhost.c_str(), req->port.c_str(),
@@ -193,7 +190,8 @@ int SrsRtmpConn::service_cycle()
         return bandwidth->bandwidth_test(req, stfd, rtmp);
     }
     
-    if ((ret = rtmp->response_connect_app(req)) != ERROR_SUCCESS) {
+    std::string local_ip = srs_get_local_ip(st_netfd_fileno(stfd));
+    if ((ret = rtmp->response_connect_app(req, local_ip.c_str())) != ERROR_SUCCESS) {
         srs_error("response connect app failed. ret=%d", ret);
         return ret;
     }
@@ -256,11 +254,13 @@ int SrsRtmpConn::stream_service_cycle()
         
     SrsRtmpConnType type;
     if ((ret = rtmp->identify_client(res->stream_id, type, req->stream, req->duration)) != ERROR_SUCCESS) {
-        srs_error("identify client failed. ret=%d", ret);
+        if (!srs_is_client_gracefully_close(ret)) {
+            srs_error("identify client failed. ret=%d", ret);
+        }
         return ret;
     }
     req->strip();
-    srs_trace("identify client success. type=%s, stream_name=%s, duration=%.2f", 
+    srs_trace("client identified, type=%s, stream_name=%s, duration=%.2f", 
         srs_client_type_string(type).c_str(), req->stream.c_str(), req->duration);
 
     // client is identified, set the timeout to service timeout.
@@ -273,7 +273,7 @@ int SrsRtmpConn::stream_service_cycle()
         srs_error("set chunk_size=%d failed. ret=%d", chunk_size, ret);
         return ret;
     }
-    srs_trace("set chunk_size=%d success", chunk_size);
+    srs_info("set chunk_size=%d success", chunk_size);
     
     // find a source to serve.
     SrsSource* source = NULL;
@@ -298,8 +298,8 @@ int SrsRtmpConn::stream_service_cycle()
     }
     
     bool enabled_cache = _srs_config->get_gop_cache(req->vhost);
-    srs_trace("source found, url=%s, enabled_cache=%d, edge=%d", 
-        req->get_stream_url().c_str(), enabled_cache, vhost_is_edge);
+    srs_trace("source url=%s, ip=%s, cache=%d, is_edge=%d, id=%d", 
+        req->get_stream_url().c_str(), ip.c_str(), enabled_cache, vhost_is_edge, source->source_id());
     source->set_cache(enabled_cache);
     
     switch (type) {
@@ -307,12 +307,14 @@ int SrsRtmpConn::stream_service_cycle()
             srs_verbose("start to play stream %s.", req->stream.c_str());
             
             if (vhost_is_edge) {
+                // notice edge to start for the first client.
                 if ((ret = source->on_edge_start_play()) != ERROR_SUCCESS) {
                     srs_error("notice edge start play stream failed. ret=%d", ret);
                     return ret;
                 }
             }
             
+            // response connection start play
             if ((ret = rtmp->start_play(res->stream_id)) != ERROR_SUCCESS) {
                 srs_error("start to play stream failed. ret=%d", ret);
                 return ret;
@@ -538,7 +540,7 @@ int SrsRtmpConn::playing(SrsSource* source)
             duration += msg->header.timestamp - starttime;
             starttime = msg->header.timestamp;
             
-            if ((ret = rtmp->send_and_free_message(msg)) != ERROR_SUCCESS) {
+            if ((ret = rtmp->send_and_free_message(msg, res->stream_id)) != ERROR_SUCCESS) {
                 srs_error("send message to client failed. ret=%d", ret);
                 return ret;
             }
@@ -568,14 +570,17 @@ int SrsRtmpConn::fmle_publish(SrsSource* source)
     
     SrsPithyPrint pithy_print(SRS_STAGE_PUBLISH_USER);
     
-    // notify the hls to prepare when publish start.
-    if ((ret = source->on_publish()) != ERROR_SUCCESS) {
-        srs_error("fmle hls on_publish failed. ret=%d", ret);
-        return ret;
-    }
-    srs_verbose("fmle hls on_publish success.");
-    
     bool vhost_is_edge = _srs_config->get_vhost_is_edge(req->vhost);
+    
+    // when edge, ignore the publish event, directly proxy it.
+    if (!vhost_is_edge) {
+        // notify the hls to prepare when publish start.
+        if ((ret = source->on_publish()) != ERROR_SUCCESS) {
+            srs_error("fmle hls on_publish failed. ret=%d", ret);
+            return ret;
+        }
+        srs_verbose("fmle hls on_publish success.");
+    }
     
     while (true) {
         // switch to other st-threads.
@@ -644,14 +649,17 @@ int SrsRtmpConn::flash_publish(SrsSource* source)
     
     SrsPithyPrint pithy_print(SRS_STAGE_PUBLISH_USER);
     
-    // notify the hls to prepare when publish start.
-    if ((ret = source->on_publish()) != ERROR_SUCCESS) {
-        srs_error("flash hls on_publish failed. ret=%d", ret);
-        return ret;
-    }
-    srs_verbose("flash hls on_publish success.");
-    
     bool vhost_is_edge = _srs_config->get_vhost_is_edge(req->vhost);
+    
+    // when edge, ignore the publish event, directly proxy it.
+    if (!vhost_is_edge) {
+        // notify the hls to prepare when publish start.
+        if ((ret = source->on_publish()) != ERROR_SUCCESS) {
+            srs_error("flash hls on_publish failed. ret=%d", ret);
+            return ret;
+        }
+        srs_verbose("flash hls on_publish success.");
+    }
     
     while (true) {
         // switch to other st-threads.

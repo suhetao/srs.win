@@ -75,6 +75,7 @@ public:
     virtual int total_size();
     virtual int read(SrsStream* stream);
     virtual int write(SrsStream* stream);
+    virtual SrsAmf0Any* copy();
 };
 
 /**
@@ -95,6 +96,7 @@ public:
     virtual int total_size();
     virtual int read(SrsStream* stream);
     virtual int write(SrsStream* stream);
+    virtual SrsAmf0Any* copy();
 };
 
 /**
@@ -114,6 +116,7 @@ public:
     virtual int total_size();
     virtual int read(SrsStream* stream);
     virtual int write(SrsStream* stream);
+    virtual SrsAmf0Any* copy();
 };
 
 /**
@@ -130,6 +133,7 @@ public:
     virtual int total_size();
     virtual int read(SrsStream* stream);
     virtual int write(SrsStream* stream);
+    virtual SrsAmf0Any* copy();
 };
 
 /**
@@ -146,6 +150,7 @@ public:
     virtual int total_size();
     virtual int read(SrsStream* stream);
     virtual int write(SrsStream* stream);
+    virtual SrsAmf0Any* copy();
 };
 
 /**
@@ -157,8 +162,8 @@ public:
 class __SrsUnSortedHashtable
 {
 private:
-    typedef std::pair<std::string, SrsAmf0Any*> SrsObjectPropertyType;
-    std::vector<SrsObjectPropertyType> properties;
+    typedef std::pair<std::string, SrsAmf0Any*> SrsAmf0ObjectPropertyType;
+    std::vector<SrsAmf0ObjectPropertyType> properties;
 public:
     __SrsUnSortedHashtable();
     virtual ~__SrsUnSortedHashtable();
@@ -166,12 +171,15 @@ public:
     virtual int count();
     virtual void clear();
     virtual std::string key_at(int index);
+    virtual const char* key_raw_at(int index);
     virtual SrsAmf0Any* value_at(int index);
     virtual void set(std::string key, SrsAmf0Any* value);
     
     virtual SrsAmf0Any* get_property(std::string name);
     virtual SrsAmf0Any* ensure_property_string(std::string name);
     virtual SrsAmf0Any* ensure_property_number(std::string name);
+
+    virtual void copy(__SrsUnSortedHashtable* src);
 };
 
 /**
@@ -190,6 +198,7 @@ public:
     virtual int total_size();
     virtual int read(SrsStream* stream);
     virtual int write(SrsStream* stream);
+    virtual SrsAmf0Any* copy();
 };
 
 /**
@@ -250,11 +259,28 @@ bool SrsAmf0Any::is_ecma_array()
     return marker == RTMP_AMF0_EcmaArray;
 }
 
+bool SrsAmf0Any::is_strict_array()
+{
+    return marker == RTMP_AMF0_StrictArray;
+}
+
+bool SrsAmf0Any::is_complex_object()
+{
+    return is_object() || is_object_eof() || is_ecma_array() || is_strict_array();
+}
+
 string SrsAmf0Any::to_str()
 {
     __SrsAmf0String* p = dynamic_cast<__SrsAmf0String*>(this);
     srs_assert(p != NULL);
     return p->value;
+}
+
+const char* SrsAmf0Any::to_str_raw()
+{
+    __SrsAmf0String* p = dynamic_cast<__SrsAmf0String*>(this);
+    srs_assert(p != NULL);
+    return p->value.data();
 }
 
 bool SrsAmf0Any::to_boolean()
@@ -283,6 +309,20 @@ SrsAmf0EcmaArray* SrsAmf0Any::to_ecma_array()
     SrsAmf0EcmaArray* p = dynamic_cast<SrsAmf0EcmaArray*>(this);
     srs_assert(p != NULL);
     return p;
+}
+
+SrsAmf0StrictArray* SrsAmf0Any::to_strict_array()
+{
+    SrsAmf0StrictArray* p = dynamic_cast<SrsAmf0StrictArray*>(this);
+    srs_assert(p != NULL);
+    return p;
+}
+
+void SrsAmf0Any::set_number(double value)
+{
+    __SrsAmf0Number* p = dynamic_cast<__SrsAmf0Number*>(this);
+    srs_assert(p != NULL);
+    p->value = value;
 }
 
 bool SrsAmf0Any::is_object_eof()
@@ -328,6 +368,11 @@ SrsAmf0Any* SrsAmf0Any::object_eof()
 SrsAmf0EcmaArray* SrsAmf0Any::ecma_array()
 {
     return new SrsAmf0EcmaArray();
+}
+
+SrsAmf0StrictArray* SrsAmf0Any::strict_array()
+{
+    return new SrsAmf0StrictArray();
 }
 
 int SrsAmf0Any::discovery(SrsStream* stream, SrsAmf0Any** ppvalue)
@@ -382,6 +427,10 @@ int SrsAmf0Any::discovery(SrsStream* stream, SrsAmf0Any** ppvalue)
             *ppvalue = SrsAmf0Any::ecma_array();
             return ret;
         }
+        case RTMP_AMF0_StrictArray: {
+            *ppvalue = SrsAmf0Any::strict_array();
+            return ret;
+        }
         case RTMP_AMF0_Invalid:
         default: {
             ret = ERROR_RTMP_AMF0_INVALID;
@@ -399,13 +448,7 @@ __SrsUnSortedHashtable::__SrsUnSortedHashtable()
 
 __SrsUnSortedHashtable::~__SrsUnSortedHashtable()
 {
-    std::vector<SrsObjectPropertyType>::iterator it;
-    for (it = properties.begin(); it != properties.end(); ++it) {
-        SrsObjectPropertyType& elem = *it;
-        SrsAmf0Any* any = elem.second;
-        srs_freep(any);
-    }
-    properties.clear();
+    clear();
 }
 
 int __SrsUnSortedHashtable::count()
@@ -415,20 +458,33 @@ int __SrsUnSortedHashtable::count()
 
 void __SrsUnSortedHashtable::clear()
 {
+    std::vector<SrsAmf0ObjectPropertyType>::iterator it;
+    for (it = properties.begin(); it != properties.end(); ++it) {
+        SrsAmf0ObjectPropertyType& elem = *it;
+        SrsAmf0Any* any = elem.second;
+        srs_freep(any);
+    }
     properties.clear();
 }
 
 string __SrsUnSortedHashtable::key_at(int index)
 {
     srs_assert(index < count());
-    SrsObjectPropertyType& elem = properties[index];
+    SrsAmf0ObjectPropertyType& elem = properties[index];
     return elem.first;
+}
+
+const char* __SrsUnSortedHashtable::key_raw_at(int index)
+{
+    srs_assert(index < count());
+    SrsAmf0ObjectPropertyType& elem = properties[index];
+    return elem.first.data();
 }
 
 SrsAmf0Any* __SrsUnSortedHashtable::value_at(int index)
 {
     srs_assert(index < count());
-    SrsObjectPropertyType& elem = properties[index];
+    SrsAmf0ObjectPropertyType& elem = properties[index];
     return elem.second;
 }
 
@@ -439,10 +495,10 @@ void __SrsUnSortedHashtable::set(string key, SrsAmf0Any* value)
         return;
     }
     
-    std::vector<SrsObjectPropertyType>::iterator it;
+    std::vector<SrsAmf0ObjectPropertyType>::iterator it;
     
     for (it = properties.begin(); it != properties.end(); ++it) {
-        SrsObjectPropertyType& elem = *it;
+        SrsAmf0ObjectPropertyType& elem = *it;
         std::string name = elem.first;
         SrsAmf0Any* any = elem.second;
         
@@ -458,10 +514,10 @@ void __SrsUnSortedHashtable::set(string key, SrsAmf0Any* value)
 
 SrsAmf0Any* __SrsUnSortedHashtable::get_property(string name)
 {
-    std::vector<SrsObjectPropertyType>::iterator it;
+    std::vector<SrsAmf0ObjectPropertyType>::iterator it;
     
     for (it = properties.begin(); it != properties.end(); ++it) {
-        SrsObjectPropertyType& elem = *it;
+        SrsAmf0ObjectPropertyType& elem = *it;
         std::string key = elem.first;
         SrsAmf0Any* any = elem.second;
         if (key == name) {
@@ -500,6 +556,17 @@ SrsAmf0Any* __SrsUnSortedHashtable::ensure_property_number(string name)
     }
     
     return prop;
+}
+
+void __SrsUnSortedHashtable::copy(__SrsUnSortedHashtable* src)
+{
+    std::vector<SrsAmf0ObjectPropertyType>::iterator it;
+    for (it = src->properties.begin(); it != src->properties.end(); ++it) {
+        SrsAmf0ObjectPropertyType& elem = *it;
+        std::string key = elem.first;
+        SrsAmf0Any* any = elem.second;
+        set(key, any->copy());
+    }
 }
 
 __SrsAmf0ObjectEOF::__SrsAmf0ObjectEOF()
@@ -580,6 +647,11 @@ int __SrsAmf0ObjectEOF::write(SrsStream* stream)
     srs_verbose("amf0 read object eof success");
     
     return ret;
+}
+
+SrsAmf0Any* __SrsAmf0ObjectEOF::copy()
+{
+    return new __SrsAmf0ObjectEOF();
 }
 
 SrsAmf0Object::SrsAmf0Object()
@@ -709,6 +781,18 @@ int SrsAmf0Object::write(SrsStream* stream)
     return ret;
 }
 
+SrsAmf0Any* SrsAmf0Object::copy()
+{
+    SrsAmf0Object* copy = new SrsAmf0Object();
+    copy->properties->copy(properties);
+    return copy;
+}
+
+void SrsAmf0Object::clear()
+{
+    properties->clear();
+}
+
 int SrsAmf0Object::count()
 {
     return properties->count();
@@ -717,6 +801,11 @@ int SrsAmf0Object::count()
 string SrsAmf0Object::key_at(int index)
 {
     return properties->key_at(index);
+}
+
+const char* SrsAmf0Object::key_raw_at(int index)
+{
+    return properties->key_raw_at(index);
 }
 
 SrsAmf0Any* SrsAmf0Object::value_at(int index)
@@ -746,6 +835,7 @@ SrsAmf0Any* SrsAmf0Object::ensure_property_number(string name)
 
 SrsAmf0EcmaArray::SrsAmf0EcmaArray()
 {
+    _count = 0;
     properties = new __SrsUnSortedHashtable();
     eof = new __SrsAmf0ObjectEOF();
     marker = RTMP_AMF0_EcmaArray;
@@ -891,6 +981,14 @@ int SrsAmf0EcmaArray::write(SrsStream* stream)
     return ret;
 }
 
+SrsAmf0Any* SrsAmf0EcmaArray::copy()
+{
+    SrsAmf0EcmaArray* copy = new SrsAmf0EcmaArray();
+    copy->properties->copy(properties);
+    copy->_count = _count;
+    return copy;
+}
+
 void SrsAmf0EcmaArray::clear()
 {
     properties->clear();
@@ -904,6 +1002,11 @@ int SrsAmf0EcmaArray::count()
 string SrsAmf0EcmaArray::key_at(int index)
 {
     return properties->key_at(index);
+}
+
+const char* SrsAmf0EcmaArray::key_raw_at(int index)
+{
+    return properties->key_raw_at(index);
 }
 
 SrsAmf0Any* SrsAmf0EcmaArray::value_at(int index)
@@ -929,6 +1032,158 @@ SrsAmf0Any* SrsAmf0EcmaArray::ensure_property_string(string name)
 SrsAmf0Any* SrsAmf0EcmaArray::ensure_property_number(string name)
 {
     return properties->ensure_property_number(name);
+}
+
+SrsAmf0StrictArray::SrsAmf0StrictArray()
+{
+    marker = RTMP_AMF0_StrictArray;
+    _count = 0;
+}
+
+SrsAmf0StrictArray::~SrsAmf0StrictArray()
+{
+    std::vector<SrsAmf0Any*>::iterator it;
+    for (it = properties.begin(); it != properties.end(); ++it) {
+        SrsAmf0Any* any = *it;
+        srs_freep(any);
+    }
+    properties.clear();
+}
+
+int SrsAmf0StrictArray::total_size()
+{
+    int size = 1 + 4;
+    
+    for (int i = 0; i < (int)properties.size(); i++){
+        SrsAmf0Any* any = properties[i];
+        size += any->total_size();
+    }
+    
+    return size;
+}
+
+int SrsAmf0StrictArray::read(SrsStream* stream)
+{
+    int ret = ERROR_SUCCESS;
+    
+    // marker
+    if (!stream->require(1)) {
+        ret = ERROR_RTMP_AMF0_DECODE;
+        srs_error("amf0 read strict_array marker failed. ret=%d", ret);
+        return ret;
+    }
+    
+    char marker = stream->read_1bytes();
+    if (marker != RTMP_AMF0_StrictArray) {
+        ret = ERROR_RTMP_AMF0_DECODE;
+        srs_error("amf0 check strict_array marker failed. "
+            "marker=%#x, required=%#x, ret=%d", marker, RTMP_AMF0_Object, ret);
+        return ret;
+    }
+    srs_verbose("amf0 read strict_array marker success");
+
+    // count
+    if (!stream->require(4)) {
+        ret = ERROR_RTMP_AMF0_DECODE;
+        srs_error("amf0 read strict_array count failed. ret=%d", ret);
+        return ret;
+    }
+    
+    int32_t count = stream->read_4bytes();
+    srs_verbose("amf0 read strict_array count success. count=%d", count);
+    
+    // value
+    this->_count = count;
+
+    for (int i = 0; i < count && !stream->empty(); i++) {
+        // property-value: any
+        SrsAmf0Any* elem = NULL;
+        if ((ret = srs_amf0_read_any(stream, &elem)) != ERROR_SUCCESS) {
+            srs_error("amf0 strict_array read value failed. ret=%d", ret);
+            return ret;
+        }
+        
+        // add property
+        properties.push_back(elem);
+    }
+    
+    return ret;
+}
+int SrsAmf0StrictArray::write(SrsStream* stream)
+{
+    int ret = ERROR_SUCCESS;
+    
+    // marker
+    if (!stream->require(1)) {
+        ret = ERROR_RTMP_AMF0_ENCODE;
+        srs_error("amf0 write strict_array marker failed. ret=%d", ret);
+        return ret;
+    }
+    
+    stream->write_1bytes(RTMP_AMF0_StrictArray);
+    srs_verbose("amf0 write strict_array marker success");
+
+    // count
+    if (!stream->require(4)) {
+        ret = ERROR_RTMP_AMF0_ENCODE;
+        srs_error("amf0 write strict_array count failed. ret=%d", ret);
+        return ret;
+    }
+    
+    stream->write_4bytes(this->_count);
+    srs_verbose("amf0 write strict_array count success. count=%d", _count);
+    
+    // value
+    for (int i = 0; i < (int)properties.size(); i++) {
+        SrsAmf0Any* any = properties[i];
+        
+        if ((ret = srs_amf0_write_any(stream, any)) != ERROR_SUCCESS) {
+            srs_error("write strict_array property value failed. ret=%d", ret);
+            return ret;
+        }
+        
+        srs_verbose("write amf0 property success. name=%s", name.c_str());
+    }
+    
+    srs_verbose("write strict_array object success.");
+    
+    return ret;
+}
+
+SrsAmf0Any* SrsAmf0StrictArray::copy()
+{
+    SrsAmf0StrictArray* copy = new SrsAmf0StrictArray();
+    
+    std::vector<SrsAmf0Any*>::iterator it;
+    for (it = properties.begin(); it != properties.end(); ++it) {
+        SrsAmf0Any* any = *it;
+        copy->append(any->copy());
+    }
+    
+    copy->_count = _count;
+    return copy;
+}
+
+void SrsAmf0StrictArray::clear()
+{
+    properties.clear();
+}
+
+int SrsAmf0StrictArray::count()
+{
+    return properties.size();
+}
+
+SrsAmf0Any* SrsAmf0StrictArray::at(int index)
+{
+    srs_assert(index < (int)properties.size());
+    return properties.at(index);
+}
+
+void SrsAmf0StrictArray::append(SrsAmf0Any* any)
+{
+    properties.push_back(any);
+    _count = (int32_t)properties.size();
 }
 
 int SrsAmf0Size::utf8(string value)
@@ -984,6 +1239,15 @@ int SrsAmf0Size::ecma_array(SrsAmf0EcmaArray* arr)
     return arr->total_size();
 }
 
+int SrsAmf0Size::strict_array(SrsAmf0StrictArray* arr)
+{
+    if (!arr) {
+        return 0;
+    }
+    
+    return arr->total_size();
+}
+
 int SrsAmf0Size::any(SrsAmf0Any* o)
 {
     if (!o) {
@@ -1020,6 +1284,12 @@ int __SrsAmf0String::write(SrsStream* stream)
     return srs_amf0_write_string(stream, value);
 }
 
+SrsAmf0Any* __SrsAmf0String::copy()
+{
+    __SrsAmf0String* copy = new __SrsAmf0String(value.c_str());
+    return copy;
+}
+
 __SrsAmf0Boolean::__SrsAmf0Boolean(bool _value)
 {
     marker = RTMP_AMF0_Boolean;
@@ -1043,6 +1313,12 @@ int __SrsAmf0Boolean::read(SrsStream* stream)
 int __SrsAmf0Boolean::write(SrsStream* stream)
 {
     return srs_amf0_write_boolean(stream, value);
+}
+
+SrsAmf0Any* __SrsAmf0Boolean::copy()
+{
+    __SrsAmf0Boolean* copy = new __SrsAmf0Boolean(value);
+    return copy;
 }
 
 __SrsAmf0Number::__SrsAmf0Number(double _value)
@@ -1070,6 +1346,12 @@ int __SrsAmf0Number::write(SrsStream* stream)
     return srs_amf0_write_number(stream, value);
 }
 
+SrsAmf0Any* __SrsAmf0Number::copy()
+{
+    __SrsAmf0Number* copy = new __SrsAmf0Number(value);
+    return copy;
+}
+
 __SrsAmf0Null::__SrsAmf0Null()
 {
     marker = RTMP_AMF0_Null;
@@ -1094,6 +1376,12 @@ int __SrsAmf0Null::write(SrsStream* stream)
     return srs_amf0_write_null(stream);
 }
 
+SrsAmf0Any* __SrsAmf0Null::copy()
+{
+    __SrsAmf0Null* copy = new __SrsAmf0Null();
+    return copy;
+}
+
 __SrsAmf0Undefined::__SrsAmf0Undefined()
 {
     marker = RTMP_AMF0_Undefined;
@@ -1116,6 +1404,12 @@ int __SrsAmf0Undefined::read(SrsStream* stream)
 int __SrsAmf0Undefined::write(SrsStream* stream)
 {
     return srs_amf0_write_undefined(stream);
+}
+
+SrsAmf0Any* __SrsAmf0Undefined::copy()
+{
+    __SrsAmf0Undefined* copy = new __SrsAmf0Undefined();
+    return copy;
 }
 
 int srs_amf0_read_any(SrsStream* stream, SrsAmf0Any** ppvalue)

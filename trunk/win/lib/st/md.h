@@ -207,6 +207,9 @@
 typedef int ssize_t;
 typedef int mode_t;
 
+extern int asm_setjmp(jmp_buf b);
+extern void asm_longjmp(jmp_buf b, int v);
+
 struct pollfd {
                int fd;
                short events;
@@ -233,8 +236,11 @@ int _st_GetError(int err);
 #define MD_ACCEPT_NB_NOT_INHERITED
 #define MD_ALWAYS_UNSERIALIZED_ACCEPT
 
-#define MD_SETJMP(env) setjmp(env)
-#define MD_LONGJMP(env, val) longjmp(env, val)
+//#define MD_SETJMP(env) setjmp(env)
+//#define MD_LONGJMP(env, val) longjmp(env, val)
+#define MD_SETJMP(env) asm_setjmp(env)
+#define MD_LONGJMP(env, val) asm_longjmp(env, val)
+
 #define MD_JB_SP 4
 #define MD_GET_SP(_t) (_t)->context[MD_JB_SP]
 

@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 
 #ifdef SRS_AUTO_GPERF_MP
 #include <gperftools/heap-profiler.h>
@@ -15,6 +16,7 @@
 #include <srs_app_config.hpp>
 #include <srs_app_log.hpp>
 #include <srs_app_utility.hpp>
+#include <srs_kernel_utility.hpp>
 
 // pre-declare
 int run_master();

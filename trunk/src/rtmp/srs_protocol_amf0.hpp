@@ -31,10 +31,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <srs_core.hpp>
 
 #include <string>
+#include <vector>
 
 class SrsStream;
 class SrsAmf0Object;
 class SrsAmf0EcmaArray;
+class SrsAmf0StrictArray;
 class __SrsUnSortedHashtable;
 class __SrsAmf0ObjectEOF;
 
@@ -61,6 +63,11 @@ class __SrsAmf0ObjectEOF;
 //        SrsAmf0Object* obj = SrsAmf0Any::object();
 // 5. SrsAmf0EcmaArray: create the amf0 ecma array.
 //        SrsAmf0EcmaArray* arr = SrsAmf0Any::ecma_array();
+// 6. SrsAmf0Any: set basic type value
+//        SrsAmf0Any* pany = ...
+//        if (pany->is_number()) {
+//            pany->set_number(100.1);
+//        }
 //
 // please carefully the size and count of amf0 any:
 // 1. total_size(): the total memory size the object wrote to buffer.
@@ -96,12 +103,16 @@ public:
     virtual bool is_object();
     virtual bool is_object_eof();
     virtual bool is_ecma_array();
+    virtual bool is_strict_array();
+public:
+    virtual bool is_complex_object();
 public:
     /**
     * get the string of any when is_string() indicates true.
     * user must ensure the type is a string, or assert failed.
     */
     virtual std::string to_str();
+    virtual const char* to_str_raw();
     /**
     * get the boolean of any when is_boolean() indicates true.
     * user must ensure the type is a boolean, or assert failed.
@@ -122,6 +133,13 @@ public:
     * user must ensure the type is a ecma array, or assert failed.
     */
     virtual SrsAmf0EcmaArray* to_ecma_array();
+    virtual SrsAmf0StrictArray* to_strict_array();
+public:
+    /**
+    * set the number of any when is_number() indicates true.
+    * user must ensure the type is a number, or assert failed.
+    */
+    virtual void set_number(double value);
 public:
     /**
     * get the size of amf0 any, including the marker size.
@@ -132,6 +150,7 @@ public:
     */
     virtual int read(SrsStream* stream) = 0;
     virtual int write(SrsStream* stream) = 0;
+    virtual SrsAmf0Any* copy() = 0;
 public:
     static SrsAmf0Any* str(const char* value = NULL); 
     static SrsAmf0Any* boolean(bool value = false);
@@ -141,6 +160,7 @@ public:
     static SrsAmf0Object* object();
     static SrsAmf0Any* object_eof();
     static SrsAmf0EcmaArray* ecma_array();
+    static SrsAmf0StrictArray* strict_array();
 public:
     static int discovery(SrsStream* stream, SrsAmf0Any** ppvalue);
 };
@@ -167,11 +187,14 @@ public:
     virtual int total_size();
     virtual int read(SrsStream* stream);
     virtual int write(SrsStream* stream);
+    virtual SrsAmf0Any* copy();
     
 public:
+    virtual void clear();
     virtual int count();
     // @remark: max index is count().
     virtual std::string key_at(int index);
+    virtual const char* key_raw_at(int index);
     // @remark: max index is count().
     virtual SrsAmf0Any* value_at(int index);
     
@@ -206,12 +229,14 @@ public:
     virtual int total_size();
     virtual int read(SrsStream* stream);
     virtual int write(SrsStream* stream);
+    virtual SrsAmf0Any* copy();
     
 public:
     virtual void clear();
     virtual int count();
     // @remark: max index is count().
     virtual std::string key_at(int index);
+    virtual const char* key_raw_at(int index);
     // @remark: max index is count().
     virtual SrsAmf0Any* value_at(int index);
 
@@ -220,6 +245,38 @@ public:
     virtual SrsAmf0Any* get_property(std::string name);
     virtual SrsAmf0Any* ensure_property_string(std::string name);
     virtual SrsAmf0Any* ensure_property_number(std::string name);
+};
+
+/**
+* 2.12 Strict Array Type
+* array-count = U32 
+* strict-array-type = array-count *(value-type)
+*/
+class SrsAmf0StrictArray : public SrsAmf0Any
+{
+private:
+    std::vector<SrsAmf0Any*> properties;
+    int32_t _count;
+
+private:
+    // use SrsAmf0Any::strict_array() to create it.
+    friend class SrsAmf0Any;
+    SrsAmf0StrictArray();
+public:
+    virtual ~SrsAmf0StrictArray();
+
+public:
+    virtual int total_size();
+    virtual int read(SrsStream* stream);
+    virtual int write(SrsStream* stream);
+    virtual SrsAmf0Any* copy();
+    
+public:
+    virtual void clear();
+    virtual int count();
+    // @remark: max index is count().
+    virtual SrsAmf0Any* at(int index);
+    virtual void append(SrsAmf0Any* any);
 };
 
 /**
@@ -237,6 +294,7 @@ public:
     static int object(SrsAmf0Object* obj);
     static int object_eof();
     static int ecma_array(SrsAmf0EcmaArray* arr);
+    static int strict_array(SrsAmf0StrictArray* arr);
     static int any(SrsAmf0Any* o);
 };
 

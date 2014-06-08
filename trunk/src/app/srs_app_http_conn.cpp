@@ -25,12 +25,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #ifdef SRS_AUTO_HTTP_SERVER
 
-#include <sstream>
-using namespace std;
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdlib.h>
+
+#include <sstream>
+using namespace std;
 
 #include <srs_kernel_log.hpp>
 #include <srs_kernel_error.hpp>
@@ -39,6 +40,8 @@ using namespace std;
 #include <srs_core_autofree.hpp>
 #include <srs_app_json.hpp>
 #include <srs_app_config.hpp>
+#include <srs_kernel_flv.hpp>
+#include <srs_kernel_utility.hpp>
 
 #define SRS_HTTP_DEFAULT_PAGE "index.html"
 
@@ -164,104 +167,293 @@ int SrsHttpVhost::do_process_request(SrsSocket* skt, SrsHttpMessage* req)
     std::string fullpath = get_request_file(req);
     
     if (srs_string_ends_with(fullpath, ".ts")) {
-        // TODO: FIXME: use more advance cache.
-        // for ts video large file, use bytes to write it.
-        int fd = ::open(fullpath.c_str(), O_RDONLY);
-        if (fd < 0) {
-            ret = ERROR_HTTP_OPEN_FILE;
-            srs_warn("open file %s failed, ret=%d", fullpath.c_str(), ret);
-            return ret;
+        return response_ts_file(skt, req, fullpath);
+    } else if (srs_string_ends_with(fullpath, ".flv") || srs_string_ends_with(fullpath, ".fhv")) {
+        std::string start = req->query_get("start");
+        if (start.empty()) {
+            return response_flv_file(skt, req, fullpath);
         }
-    
-        int64_t length = (int64_t)::lseek(fd, 0, SEEK_END);
-        ::lseek(fd, 0, SEEK_SET);
-    
-        // write http header for ts.
-        std::stringstream ss;
-    
-        res_status_line(ss)->res_content_type_mpegts(ss)
-            ->res_content_length(ss, (int)length);
-            
-        if (req->requires_crossdomain()) {
-            res_enable_crossdomain(ss);
+
+        int offset = ::atoi(start.c_str());
+        if (offset <= 0) {
+            return response_flv_file(skt, req, fullpath);
         }
         
-        res_header_eof(ss);
-        
-        // flush http header to peer
-        if ((ret = res_flush(skt, ss)) != ERROR_SUCCESS) {
-            return ret;
-        }
-        
-        // write body.
-        int64_t left = length;
-        char* buf = req->http_ts_send_buffer();
-        
-        while (left > 0) {
-            ssize_t nread = -1;
-            // TODO: FIXME: use st_read.
-            if ((nread = ::read(fd, buf, HTTP_TS_SEND_BUFFER_SIZE)) < 0) {
-                ::close(fd);
-                ret = ERROR_HTTP_READ_FILE;
-                srs_warn("read file %s failed, ret=%d", fullpath.c_str(), ret);
-                return ret;
-            }
-            
-            left -= nread;
-            if ((ret = skt->write(buf, nread, NULL)) != ERROR_SUCCESS) {
-                break;
-            }
-        }
-        ::close(fd);
-        
-        return ret;
+        return response_flv_file2(skt, req, fullpath, offset);
     } else {
-        // TODO: FIXME: refine the file stream.
-        int fd = ::open(fullpath.c_str(), O_RDONLY);
-        if (fd < 0) {
-            ret = ERROR_HTTP_OPEN_FILE;
-            srs_warn("open file %s failed, ret=%d", fullpath.c_str(), ret);
-            return ret;
-        }
+        return response_regular_file(skt, req, fullpath);
+    }
     
-        int64_t length = (int64_t)::lseek(fd, 0, SEEK_END);
-        ::lseek(fd, 0, SEEK_SET);
+    return ret;
+}
+
+int SrsHttpVhost::response_regular_file(SrsSocket* skt, SrsHttpMessage* req, string fullpath)
+{
+    int ret = ERROR_SUCCESS;
+
+    // TODO: FIXME: refine the file stream.
+    int fd = ::open(fullpath.c_str(), O_RDONLY);
+    if (fd < 0) {
+        ret = ERROR_HTTP_OPEN_FILE;
+        srs_warn("open file %s failed, ret=%d", fullpath.c_str(), ret);
+        return ret;
+    }
+
+    int64_t length = (int64_t)::lseek(fd, 0, SEEK_END);
+    ::lseek(fd, 0, SEEK_SET);
+    
+    char* buf = new char[length];
+    SrsAutoFree(char, buf);
+    
+    // TODO: FIXME: use st_read.
+    if (::read(fd, buf, length) < 0) {
+        ::close(fd);
+        ret = ERROR_HTTP_READ_FILE;
+        srs_warn("read file %s failed, ret=%d", fullpath.c_str(), ret);
+        return ret;
+    }
+    ::close(fd);
+    
+    std::string str;
+    str.append(buf, length);
+    
+    if (srs_string_ends_with(fullpath, ".ts")) {
+        return res_mpegts(skt, req, str);
+    } else if (srs_string_ends_with(fullpath, ".m3u8")) {
+        return res_m3u8(skt, req, str);
+    } else if (srs_string_ends_with(fullpath, ".xml")) {
+        return res_xml(skt, req, str);
+    } else if (srs_string_ends_with(fullpath, ".js")) {
+        return res_javascript(skt, req, str);
+    } else if (srs_string_ends_with(fullpath, ".json")) {
+        return res_json(skt, req, str);
+    } else if (srs_string_ends_with(fullpath, ".swf")) {
+        return res_swf(skt, req, str);
+    } else if (srs_string_ends_with(fullpath, ".css")) {
+        return res_css(skt, req, str);
+    } else if (srs_string_ends_with(fullpath, ".ico")) {
+        return res_ico(skt, req, str);
+    } else {
+        return res_text(skt, req, str);
+    }
+    
+    return ret;
+}
+
+int SrsHttpVhost::response_flv_file(SrsSocket* skt, SrsHttpMessage* req, string fullpath)
+{
+    int ret = ERROR_SUCCESS;
+    
+    // TODO: FIXME: use more advance cache.
+    // for ts video large file, use bytes to write it.
+    int fd = ::open(fullpath.c_str(), O_RDONLY);
+    if (fd < 0) {
+        ret = ERROR_HTTP_OPEN_FILE;
+        srs_warn("open file %s failed, ret=%d", fullpath.c_str(), ret);
+        return ret;
+    }
+
+    int64_t length = (int64_t)::lseek(fd, 0, SEEK_END);
+    ::lseek(fd, 0, SEEK_SET);
+
+    // write http header for ts.
+    std::stringstream ss;
+
+    res_status_line(ss)->res_content_type_flv(ss)
+        ->res_content_length(ss, (int)length);
         
-        char* buf = new char[length];
-        SrsAutoFree(char, buf);
-        
+    if (req->requires_crossdomain()) {
+        res_enable_crossdomain(ss);
+    }
+    
+    res_header_eof(ss);
+    
+    // flush http header to peer
+    if ((ret = res_flush(skt, ss)) != ERROR_SUCCESS) {
+        return ret;
+    }
+    
+    // write body.
+    int64_t left = length;
+    char* buf = req->http_ts_send_buffer();
+    
+    while (left > 0) {
+        ssize_t nread = -1;
         // TODO: FIXME: use st_read.
-        if (::read(fd, buf, length) < 0) {
-            ::close(fd);
+        if ((nread = ::read(fd, buf, HTTP_TS_SEND_BUFFER_SIZE)) < 0) {
             ret = ERROR_HTTP_READ_FILE;
             srs_warn("read file %s failed, ret=%d", fullpath.c_str(), ret);
-            return ret;
+            break;
         }
-        ::close(fd);
         
-        std::string str;
-        str.append(buf, length);
-        
-        if (srs_string_ends_with(fullpath, ".ts")) {
-            return res_mpegts(skt, req, str);
-        } else if (srs_string_ends_with(fullpath, ".m3u8")) {
-            return res_m3u8(skt, req, str);
-        } else if (srs_string_ends_with(fullpath, ".xml")) {
-            return res_xml(skt, req, str);
-        } else if (srs_string_ends_with(fullpath, ".js")) {
-            return res_javascript(skt, req, str);
-        } else if (srs_string_ends_with(fullpath, ".json")) {
-            return res_json(skt, req, str);
-        } else if (srs_string_ends_with(fullpath, ".swf")) {
-            return res_swf(skt, req, str);
-        } else if (srs_string_ends_with(fullpath, ".css")) {
-            return res_css(skt, req, str);
-        } else if (srs_string_ends_with(fullpath, ".ico")) {
-            return res_ico(skt, req, str);
-        } else {
-            return res_text(skt, req, str);
+        left -= nread;
+        if ((ret = skt->write(buf, nread, NULL)) != ERROR_SUCCESS) {
+            break;
         }
     }
+    ::close(fd);
+    
+    return ret;
+}
+
+int SrsHttpVhost::response_flv_file2(SrsSocket* skt, SrsHttpMessage* req, string fullpath, int offset)
+{
+    int ret = ERROR_SUCCESS;
+    
+    SrsFileStream fs;
+    
+    // open flv file
+    if ((ret = fs.open_read(fullpath)) != ERROR_SUCCESS) {
+        return ret;
+    }
+    
+    if (offset > fs.filesize()) {
+        ret = ERROR_HTTP_FLV_OFFSET_OVERFLOW;
+        srs_warn("http flv streaming %s overflow. size=%"PRId64", offset=%d, ret=%d", 
+            fullpath.c_str(), fs.filesize(), offset, ret);
+        return ret;
+    }
+    
+    SrsFlvFastDecoder ffd;
+    
+    // open fast decoder
+    if ((ret = ffd.initialize(&fs)) != ERROR_SUCCESS) {
+        return ret;
+    }
+    
+    // save header, send later.
+    char* flv_header = NULL;
+    int flv_size = 0;
+    
+    // send flv header
+    if ((ret = ffd.read_header(&flv_header, &flv_size)) != ERROR_SUCCESS) {
+        return ret;
+    }
+    SrsAutoFree(char, flv_header);
+    
+    // save sequence header, send later
+    char* sh_data = NULL;
+    int sh_size = 0;
+    
+    if (true) {
+        // send sequence header
+        int64_t start = 0;
+        if ((ret = ffd.read_sequence_header(&start, &sh_size)) != ERROR_SUCCESS) {
+            return ret;
+        }
+        if (sh_size <= 0) {
+            ret = ERROR_HTTP_FLV_SEQUENCE_HEADER;
+            srs_warn("http flv streaming no sequence header. size=%d, ret=%d", sh_size, ret);
+            return ret;
+        }
+    }
+    sh_data = new char[sh_size];
+    SrsAutoFree(char, sh_data);
+    if ((ret = fs.read(sh_data, sh_size, NULL)) != ERROR_SUCCESS) {
+        return ret;
+    }
+
+    // seek to data offset
+    int64_t left = fs.filesize() - offset;
+
+    // write http header for ts.
+    std::stringstream ss;
+
+    res_status_line(ss)->res_content_type_flv(ss)
+        ->res_content_length(ss, (int)(flv_size + sh_size + left));
+        
+    if (req->requires_crossdomain()) {
+        res_enable_crossdomain(ss);
+    }
+    
+    res_header_eof(ss);
+    
+    // flush http header to peer
+    if ((ret = res_flush(skt, ss)) != ERROR_SUCCESS) {
+        return ret;
+    }
+    
+    if (flv_size > 0 && (ret = skt->write(flv_header, flv_size, NULL)) != ERROR_SUCCESS) {
+        return ret;
+    }
+    if (sh_size > 0 && (ret = skt->write(sh_data, sh_size, NULL)) != ERROR_SUCCESS) {
+        return ret;
+    }
+    
+    // write body.
+    char* buf = req->http_ts_send_buffer();
+    if ((ret = ffd.lseek(offset)) != ERROR_SUCCESS) {
+        return ret;
+    }
+    
+    // send data
+    while (left > 0) {
+        ssize_t nread = -1;
+        if ((ret = fs.read(buf, HTTP_TS_SEND_BUFFER_SIZE, &nread)) != ERROR_SUCCESS) {
+            return ret;
+        }
+        
+        left -= nread;
+        if ((ret = skt->write(buf, nread, NULL)) != ERROR_SUCCESS) {
+            return ret;
+        }
+    }
+    
+    return ret;
+}
+
+int SrsHttpVhost::response_ts_file(SrsSocket* skt, SrsHttpMessage* req, string fullpath)
+{
+    int ret = ERROR_SUCCESS;
+    
+    // TODO: FIXME: use more advance cache.
+    // for ts video large file, use bytes to write it.
+    int fd = ::open(fullpath.c_str(), O_RDONLY);
+    if (fd < 0) {
+        ret = ERROR_HTTP_OPEN_FILE;
+        srs_warn("open file %s failed, ret=%d", fullpath.c_str(), ret);
+        return ret;
+    }
+
+    int64_t length = (int64_t)::lseek(fd, 0, SEEK_END);
+    ::lseek(fd, 0, SEEK_SET);
+
+    // write http header for ts.
+    std::stringstream ss;
+
+    res_status_line(ss)->res_content_type_mpegts(ss)
+        ->res_content_length(ss, (int)length);
+        
+    if (req->requires_crossdomain()) {
+        res_enable_crossdomain(ss);
+    }
+    
+    res_header_eof(ss);
+    
+    // flush http header to peer
+    if ((ret = res_flush(skt, ss)) != ERROR_SUCCESS) {
+        return ret;
+    }
+    
+    // write body.
+    int64_t left = length;
+    char* buf = req->http_ts_send_buffer();
+    
+    while (left > 0) {
+        ssize_t nread = -1;
+        // TODO: FIXME: use st_read.
+        if ((nread = ::read(fd, buf, HTTP_TS_SEND_BUFFER_SIZE)) < 0) {
+            ret = ERROR_HTTP_READ_FILE;
+            srs_warn("read file %s failed, ret=%d", fullpath.c_str(), ret);
+            break;
+        }
+        
+        left -= nread;
+        if ((ret = skt->write(buf, nread, NULL)) != ERROR_SUCCESS) {
+            break;
+        }
+    }
+    ::close(fd);
     
     return ret;
 }
@@ -323,11 +515,7 @@ int SrsHttpConn::do_cycle()
 {
     int ret = ERROR_SUCCESS;
     
-    if ((ret = get_peer_ip()) != ERROR_SUCCESS) {
-        srs_error("get peer ip failed. ret=%d", ret);
-        return ret;
-    }
-    srs_trace("http get peer ip success. ip=%s", ip);
+    srs_trace("HTTP client ip=%s", ip.c_str());
     
     // initialize parser
     if ((ret = parser->initialize(HTTP_REQUEST)) != ERROR_SUCCESS) {
@@ -372,8 +560,8 @@ int SrsHttpConn::process_request(SrsSocket* skt, SrsHttpMessage* req)
         return ret;
     }
     
-    srs_trace("http request parsed, method=%d, url=%s, content-length=%"PRId64"", 
-        req->method(), req->url().c_str(), req->content_length());
+    srs_trace("HTTP %s %s, content-length=%"PRId64"", 
+        req->method_str().c_str(), req->url().c_str(), req->content_length());
     
     // TODO: maybe need to parse the url.
     std::string url = req->path();

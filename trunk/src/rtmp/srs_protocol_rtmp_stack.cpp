@@ -30,6 +30,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <srs_kernel_buffer.hpp>
 #include <srs_kernel_stream.hpp>
 #include <srs_core_autofree.hpp>
+#include <srs_kernel_utility.hpp>
 
 using namespace std;
 
@@ -719,14 +720,19 @@ int SrsProtocol::do_decode_message(SrsMessageHeader& header, SrsStream* stream, 
         *ppacket = packet = new SrsSetChunkSizePacket();
         return packet->decode(stream);
     } else {
-        srs_trace("drop unknown message, type=%d", header.message_type);
+        if (!header.is_set_peer_bandwidth()) {
+            srs_trace("drop unknown message, type=%d", header.message_type);
+        }
     }
     
     return ret;
 }
 
-int SrsProtocol::send_and_free_message(SrsMessage* msg)
+int SrsProtocol::send_and_free_message(SrsMessage* msg, int stream_id)
 {
+    if (msg) {
+        msg->header.stream_id = stream_id;
+    }
     return do_send_and_free_message(msg, NULL);
 }
 
@@ -864,7 +870,7 @@ int SrsProtocol::read_basic_header(char& fmt, int& cid, int& bh_size)
     int ret = ERROR_SUCCESS;
     
     int required_size = 1;
-    if ((ret = buffer->ensure_buffer_bytes(skt, required_size)) != ERROR_SUCCESS) {
+    if ((ret = buffer->grow(skt, required_size)) != ERROR_SUCCESS) {
         if (ret != ERROR_SOCKET_TIMEOUT && !srs_is_client_gracefully_close(ret)) {
             srs_error("read 1bytes basic header failed. required_size=%d, ret=%d", required_size, ret);
         }
@@ -884,7 +890,7 @@ int SrsProtocol::read_basic_header(char& fmt, int& cid, int& bh_size)
 
     if (cid == 0) {
         required_size = 2;
-        if ((ret = buffer->ensure_buffer_bytes(skt, required_size)) != ERROR_SUCCESS) {
+        if ((ret = buffer->grow(skt, required_size)) != ERROR_SUCCESS) {
             if (ret != ERROR_SOCKET_TIMEOUT && !srs_is_client_gracefully_close(ret)) {
                 srs_error("read 2bytes basic header failed. required_size=%d, ret=%d", required_size, ret);
             }
@@ -897,7 +903,7 @@ int SrsProtocol::read_basic_header(char& fmt, int& cid, int& bh_size)
         srs_verbose("%dbytes basic header parsed. fmt=%d, cid=%d", bh_size, fmt, cid);
     } else if (cid == 1) {
         required_size = 3;
-        if ((ret = buffer->ensure_buffer_bytes(skt, 3)) != ERROR_SUCCESS) {
+        if ((ret = buffer->grow(skt, 3)) != ERROR_SUCCESS) {
             if (ret != ERROR_SOCKET_TIMEOUT && !srs_is_client_gracefully_close(ret)) {
                 srs_error("read 3bytes basic header failed. required_size=%d, ret=%d", required_size, ret);
             }
@@ -977,7 +983,7 @@ int SrsProtocol::read_message_header(SrsChunkStream* chunk, char fmt, int bh_siz
     srs_verbose("calc chunk message header size. fmt=%d, mh_size=%d", fmt, mh_size);
     
     int required_size = bh_size + mh_size;
-    if ((ret = buffer->ensure_buffer_bytes(skt, required_size)) != ERROR_SUCCESS) {
+    if ((ret = buffer->grow(skt, required_size)) != ERROR_SUCCESS) {
         if (ret != ERROR_SOCKET_TIMEOUT && !srs_is_client_gracefully_close(ret)) {
             srs_error("read %dbytes message header failed. required_size=%d, ret=%d", mh_size, required_size, ret);
         }
@@ -1087,7 +1093,7 @@ int SrsProtocol::read_message_header(SrsChunkStream* chunk, char fmt, int bh_siz
         mh_size += 4;
         required_size = bh_size + mh_size;
         srs_verbose("read header ext time. fmt=%d, ext_time=%d, mh_size=%d", fmt, chunk->extended_timestamp, mh_size);
-        if ((ret = buffer->ensure_buffer_bytes(skt, required_size)) != ERROR_SUCCESS) {
+        if ((ret = buffer->grow(skt, required_size)) != ERROR_SUCCESS) {
             if (ret != ERROR_SOCKET_TIMEOUT && !srs_is_client_gracefully_close(ret)) {
                 srs_error("read %dbytes message header failed. required_size=%d, ret=%d", mh_size, required_size, ret);
             }
@@ -1157,6 +1163,9 @@ int SrsProtocol::read_message_header(SrsChunkStream* chunk, char fmt, int bh_siz
     //        milliseconds.
     // in a word, 31bits timestamp is ok.
     // convert extended timestamp to 31bits.
+    if (chunk->header.timestamp > 0x7fffffff) {
+        srs_warn("RTMP 31bits timestamp overflow, time=%"PRId64, chunk->header.timestamp);
+    }
     chunk->header.timestamp &= 0x7fffffff;
     
     // valid message
@@ -1211,7 +1220,7 @@ int SrsProtocol::read_message_payload(SrsChunkStream* chunk, int bh_size, int mh
     
     // read payload to buffer
     int required_size = bh_size + mh_size + payload_size;
-    if ((ret = buffer->ensure_buffer_bytes(skt, required_size)) != ERROR_SUCCESS) {
+    if ((ret = buffer->grow(skt, required_size)) != ERROR_SUCCESS) {
         if (ret != ERROR_SOCKET_TIMEOUT && !srs_is_client_gracefully_close(ret)) {
             srs_error("read payload failed. required_size=%d, ret=%d", required_size, ret);
         }
@@ -1283,7 +1292,10 @@ int SrsProtocol::on_recv_message(SrsMessage* msg)
             
             if (pkt->ackowledgement_window_size > 0) {
                 in_ack_size.ack_window_size = pkt->ackowledgement_window_size;
-                srs_trace("set ack window size to %d", pkt->ackowledgement_window_size);
+                // @remakr, we ignore this message, for user noneed to care.
+                // but it's important for dev, for client/server will block if required 
+                // ack msg not arrived.
+                srs_info("set ack window size to %d", pkt->ackowledgement_window_size);
             } else {
                 srs_warn("ignored. set ack window size is %d", pkt->ackowledgement_window_size);
             }
@@ -1295,7 +1307,7 @@ int SrsProtocol::on_recv_message(SrsMessage* msg)
             
             in_chunk_size = pkt->chunk_size;
             
-            srs_trace("set input chunk size to %d", pkt->chunk_size);
+            srs_trace("input chunk size to %d", pkt->chunk_size);
             break;
         }
         case RTMP_MSG_UserControlMessage: {
@@ -1333,7 +1345,7 @@ int SrsProtocol::on_send_message(SrsMessage* msg, SrsPacket* packet)
             
             out_chunk_size = pkt->chunk_size;
             
-            srs_trace("set output chunk size to %d", pkt->chunk_size);
+            srs_trace("out chunk size to %d", pkt->chunk_size);
             break;
         }
         case RTMP_MSG_AMF0CommandMessage:
@@ -1465,6 +1477,11 @@ bool SrsMessageHeader::is_set_chunk_size()
 bool SrsMessageHeader::is_user_control_message()
 {
     return message_type == RTMP_MSG_UserControlMessage;
+}
+
+bool SrsMessageHeader::is_set_peer_bandwidth()
+{
+    return message_type == RTMP_MSG_SetPeerBandwidth;
 }
 
 bool SrsMessageHeader::is_aggregate()
@@ -3167,10 +3184,9 @@ int SrsOnMetaDataPacket::decode(SrsStream* stream)
     
         // if ecma array, copy to object.
         for (int i = 0; i < arr->count(); i++) {
-            metadata->set(arr->key_at(i), arr->value_at(i));
+            metadata->set(arr->key_at(i), arr->value_at(i)->copy());
         }
         
-        arr->clear();
         srs_info("decode metadata array success");
     }
     

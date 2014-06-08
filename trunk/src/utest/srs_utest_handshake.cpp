@@ -26,6 +26,67 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <srs_core_autofree.hpp>
 #include <srs_protocol_utility.hpp>
 
+MockEmptyIO::MockEmptyIO()
+{
+}
+
+MockEmptyIO::~MockEmptyIO()
+{
+}
+
+bool MockEmptyIO::is_never_timeout(int64_t /*timeout_us*/)
+{
+    return true;
+}
+
+int MockEmptyIO::read_fully(void* /*buf*/, size_t /*size*/, ssize_t* /*nread*/)
+{
+    return ERROR_SUCCESS;
+}
+
+int MockEmptyIO::write(void* /*buf*/, size_t /*size*/, ssize_t* /*nwrite*/)
+{
+    return ERROR_SUCCESS;
+}
+
+void MockEmptyIO::set_recv_timeout(int64_t /*timeout_us*/)
+{
+}
+
+int64_t MockEmptyIO::get_recv_timeout()
+{
+    return -1;
+}
+
+int64_t MockEmptyIO::get_recv_bytes()
+{
+    return -1;
+}
+
+void MockEmptyIO::set_send_timeout(int64_t /*timeout_us*/)
+{
+}
+
+int64_t MockEmptyIO::get_send_timeout()
+{
+    return 0;
+}
+
+int64_t MockEmptyIO::get_send_bytes()
+{
+    return 0;
+}
+
+int MockEmptyIO::writev(const iovec */*iov*/, int /*iov_size*/, ssize_t* /*nwrite*/)
+{
+    return ERROR_SUCCESS;
+}
+
+int MockEmptyIO::read(void* /*buf*/, size_t /*size*/, ssize_t* /*nread*/)
+{
+    return ERROR_SUCCESS;
+}
+
 #ifdef SRS_AUTO_SSL
 
 // verify the sha256
@@ -109,8 +170,8 @@ VOID TEST(HandshakeTest, VerifyFPC0C1)
     
     // the schema of data must be schema0: key-digest.
     ASSERT_EQ(ERROR_SUCCESS, c1.parse(c0c1 + 1, srs_schema0));
-    EXPECT_EQ((int32_t)0xd0640f00, c1.time);
-    EXPECT_EQ((int32_t)0x2070080, c1.version);
+    EXPECT_EQ((int32_t)0x000f64d0, c1.time);
+    EXPECT_EQ((int32_t)0x80000702, c1.version);
     
     // manually validate the c1
     // @see: calc_c1_digest

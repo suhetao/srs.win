@@ -228,9 +228,15 @@ protected:
     */
     virtual bool is_handler_valid(SrsHttpMessage* req, int& status_code, std::string& reason_phrase);
     /**
-    * do the actual process of request.
+    * do the actual process of request., format as, for example:
+    * {"code":0, "data":{}}
     */
     virtual int do_process_request(SrsSocket* skt, SrsHttpMessage* req);
+    /**
+    * response error, format as, for example:
+    * {"code":100, "desc":"description"}
+    */
+    virtual int response_error(SrsSocket* skt, SrsHttpMessage* req, int code, std::string desc);
 // response writer
 public:
     virtual SrsHttpHandler* res_status_line(std::stringstream& ss);
@@ -244,6 +250,7 @@ public:
     virtual SrsHttpHandler* res_content_type_json(std::stringstream& ss);
     virtual SrsHttpHandler* res_content_type_m3u8(std::stringstream& ss);
     virtual SrsHttpHandler* res_content_type_mpegts(std::stringstream& ss);
+    virtual SrsHttpHandler* res_content_type_flv(std::stringstream& ss);
     virtual SrsHttpHandler* res_content_length(std::stringstream& ss, int64_t length);
     virtual SrsHttpHandler* res_enable_crossdomain(std::stringstream& ss);
     virtual SrsHttpHandler* res_header_eof(std::stringstream& ss);
@@ -317,6 +324,9 @@ private:
     * use a buffer to read and send ts file.
     */
     char* _http_ts_send_buffer;
+    // http headers
+    typedef std::pair<std::string, std::string> SrsHttpHeaderField;
+    std::vector<SrsHttpHeaderField> headers;
 public:
     SrsHttpMessage();
     virtual ~SrsHttpMessage();
@@ -327,10 +337,19 @@ public:
 public:
     virtual bool is_complete();
     virtual u_int8_t method();
+    virtual std::string method_str();
+    virtual bool is_http_get();
+    virtual bool is_http_put();
+    virtual bool is_http_post();
+    virtual bool is_http_delete();
+    virtual bool is_http_options();
+    virtual std::string uri();
     virtual std::string url();
+    virtual std::string host();
     virtual std::string path();
     virtual std::string query();
     virtual std::string body();
+    virtual char* body_raw();
     virtual int64_t body_size();
     virtual int64_t content_length();
     virtual SrsHttpHandlerMatch* match();
@@ -341,6 +360,19 @@ public:
     virtual void set_match(SrsHttpHandlerMatch* match);
     virtual void set_requires_crossdomain(bool requires_crossdomain);
     virtual void append_body(const char* body, int length);
+public:
+    /**
+    * get the param in query string,
+    * for instance, query is "start=100&end=200",
+    * then query_get("start") is "100", and query_get("end") is "200"
+    */
+    virtual std::string query_get(std::string key);
+public:
+    virtual int request_header_count();
+    virtual std::string request_header_key_at(int index);
+    virtual std::string request_header_value_at(int index);
+    virtual void set_request_header(std::string key, std::string value);
+    virtual std::string get_request_header(std::string name);
 };
 
 /**
@@ -353,6 +385,7 @@ private:
     http_parser_settings settings;
     http_parser parser;
     SrsHttpMessage* msg;
+    std::string filed_name;
 public:
     SrsHttpParser();
     virtual ~SrsHttpParser();

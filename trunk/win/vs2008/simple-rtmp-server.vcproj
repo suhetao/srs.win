@@ -25,6 +25,7 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
+				CommandLine=""
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -41,7 +42,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\inc;..\lib;&quot;..\lib\openssl-1.0.1e\inc32&quot;;..\lib\IOCP;..\lib\stl;..\lib\myst;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
+				AdditionalIncludeDirectories="..\inc;..\lib;&quot;..\lib\openssl-1.0.1e\inc32&quot;;&quot;..\lib\openssl-1.0.1e\tmp32&quot;;&quot;..\lib\http-parser-2.1&quot;;..\lib\IOCP;..\lib\stl;..\lib\st;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="false"
 				ExceptionHandling="1"
@@ -62,7 +63,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ws2_32.lib ..\..\lib\ssleay32.lib ..\..\lib\libeay32.lib"
+				AdditionalDependencies="ws2_32.lib ..\..\lib\ssleay32.lib ..\..\lib\libeay32.lib ..\..\lib\http-parser.lib"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -117,7 +118,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="..\inc;..\lib;&quot;..\lib\openssl-1.0.1e\inc32&quot;;..\lib\IOCP;..\lib\stl;..\lib\myst;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
+				AdditionalIncludeDirectories="..\inc;..\lib;&quot;..\lib\openssl-1.0.1e\inc32&quot;;&quot;..\lib\openssl-1.0.1e\tmp32&quot;;&quot;..\lib\http-parser-2.1&quot;;..\lib\IOCP;..\lib\stl;..\lib\st;..\src;..\..\src\app;..\..\src\core;..\..\src\kernel;..\..\src\libs;..\..\src\main;..\..\src\rtmp"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -136,7 +137,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ws2_32.lib ..\..\lib\ssleay32.lib ..\..\lib\libeay32.lib"
+				AdditionalDependencies="ws2_32.lib ..\..\lib\ssleay32.lib ..\..\lib\libeay32.lib ..\..\lib\http-parser.lib"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -174,19 +175,19 @@
 			Name="app"
 			>
 			<File
+				RelativePath="..\..\src\app\srs_app_avc_aac.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\app\srs_app_avc_aac.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\app\srs_app_bandwidth.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\..\src\app\srs_app_bandwidth.hpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\app\srs_app_codec.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\app\srs_app_codec.hpp"
 				>
 			</File>
 			<File
@@ -222,6 +223,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\app\srs_app_empty.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\app\srs_app_empty.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\app\srs_app_encoder.cpp"
 				>
 			</File>
@@ -246,6 +255,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\app\srs_app_heartbeat.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\app\srs_app_heartbeat.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\app\srs_app_hls.cpp"
 				>
 			</File>
@@ -267,6 +284,14 @@
 			</File>
 			<File
 				RelativePath="..\..\src\app\srs_app_http_api.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\app\srs_app_http_client.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\app\srs_app_http_client.hpp"
 				>
 			</File>
 			<File
@@ -390,10 +415,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\app\srs_app_utility.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\app\srs_app_utility.hpp"
 				>
 			</File>
@@ -430,11 +451,27 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\kernel\srs_kernel_codec.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\kernel\srs_kernel_codec.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\kernel\srs_kernel_error.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\..\src\kernel\srs_kernel_error.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\kernel\srs_kernel_flv.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\kernel\srs_kernel_flv.hpp"
 				>
 			</File>
 			<File
@@ -526,7 +563,47 @@
 			Name="win32"
 			>
 			<File
+				RelativePath="..\src\Counter.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\Counter.h"
+				>
+			</File>
+			<File
+				RelativePath="..\src\CpuInfo.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\CpuInfo.h"
+				>
+			</File>
+			<File
+				RelativePath="..\src\ifaddrs.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\LoadAvg.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\LoadAvg.h"
+				>
+			</File>
+			<File
+				RelativePath="..\src\MemInfo.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\MemInfo.h"
+				>
+			</File>
+			<File
 				RelativePath="..\src\resource.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\srs_app_utility_win32.cpp"
 				>
 			</File>
 			<File
@@ -542,113 +619,77 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\UpTime.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\UpTime.h"
+				>
+			</File>
+			<File
+				RelativePath="..\src\Util.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\Util.h"
+				>
+			</File>
+			<File
 				RelativePath="..\src\utils.c"
 				>
 			</File>
 			<Filter
 				Name="lib"
 				>
-				<File
-					RelativePath="..\lib\Util.c"
-					>
-				</File>
-				<File
-					RelativePath="..\lib\Util.h"
-					>
-				</File>
 				<Filter
-					Name="myst"
+					Name="st"
 					>
 					<File
-						RelativePath="..\lib\myst\myst.c"
+						RelativePath="..\lib\st\common.h"
 						>
 					</File>
 					<File
-						RelativePath="..\lib\myst\neterr.h"
+						RelativePath="..\lib\st\event_win.c"
 						>
 					</File>
 					<File
-						RelativePath="..\lib\myst\st.h"
-						>
-					</File>
-				</Filter>
-				<Filter
-					Name="stl"
-					>
-					<File
-						RelativePath="..\lib\stl\List.c"
+						RelativePath="..\lib\st\io_win.c"
 						>
 					</File>
 					<File
-						RelativePath="..\lib\stl\List.h"
+						RelativePath="..\lib\st\key.c"
 						>
 					</File>
 					<File
-						RelativePath="..\lib\stl\Map.c"
+						RelativePath="..\lib\st\md.h"
 						>
 					</File>
 					<File
-						RelativePath="..\lib\stl\Map.h"
+						RelativePath="..\lib\st\neterr.h"
 						>
 					</File>
 					<File
-						RelativePath="..\lib\stl\Vector.c"
+						RelativePath="..\lib\st\public.h"
 						>
 					</File>
 					<File
-						RelativePath="..\lib\stl\Vector.h"
-						>
-					</File>
-				</Filter>
-				<Filter
-					Name="IOCP"
-					>
-					<File
-						RelativePath="..\lib\IOCP\IOCP.c"
+						RelativePath="..\lib\st\sched_win.c"
 						>
 					</File>
 					<File
-						RelativePath="..\lib\IOCP\IOCP.h"
+						RelativePath="..\lib\st\setjmp.c"
 						>
 					</File>
 					<File
-						RelativePath="..\lib\IOCP\Lock.c"
+						RelativePath="..\lib\st\st.h"
 						>
 					</File>
 					<File
-						RelativePath="..\lib\IOCP\Lock.h"
+						RelativePath="..\lib\st\stk.c"
 						>
 					</File>
 					<File
-						RelativePath="..\lib\IOCP\LockPool.c"
-						>
-					</File>
-					<File
-						RelativePath="..\lib\IOCP\LockPool.h"
-						>
-					</File>
-					<File
-						RelativePath="..\lib\IOCP\SocketPool.c"
-						>
-					</File>
-					<File
-						RelativePath="..\lib\IOCP\SocketPool.h"
-						>
-					</File>
-					<File
-						RelativePath="..\lib\IOCP\Thread.c"
-						>
-					</File>
-					<File
-						RelativePath="..\lib\IOCP\Thread.h"
-						>
-					</File>
-					<File
-						RelativePath="..\lib\IOCP\TimerQueue.c"
-						>
-					</File>
-					<File
-						RelativePath="..\lib\IOCP\TimerQueue.h"
+						RelativePath="..\lib\st\sync.c"
 						>
 					</File>
 				</Filter>

@@ -70,6 +70,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define SRS_CONF_DEFAULT_HTTP_STREAM_PORT 8080
 #define SRS_CONF_DEFAULT_HTTP_API_PORT 1985
 
+#define SRS_CONF_DEFAULT_HTTP_HEAETBEAT_ENABLED false
+#define SRS_CONF_DEFAULT_HTTP_HEAETBEAT_INTERVAL 9.9
+#define SRS_CONF_DEFAULT_HTTP_HEAETBEAT_URL "http://127.0.0.1:8085/api/v1/servers"
+
 #define SRS_STAGE_PLAY_USER_INTERVAL_MS 10000
 #define SRS_STAGE_PUBLISH_USER_INTERVAL_MS 10000
 #define SRS_STAGE_FORWARDER_INTERVAL_MS 10000
@@ -96,6 +100,7 @@ public:
     std::string arg0();
     std::string arg1(); 
     std::string arg2();
+    void set_arg0(std::string value);
     SrsConfDirective* at(int index);
     SrsConfDirective* get(std::string _name);
     SrsConfDirective* get(std::string _name, std::string _arg0);
@@ -135,6 +140,20 @@ public:
     virtual void subscribe(ISrsReloadHandler* handler);
     virtual void unsubscribe(ISrsReloadHandler* handler);
     virtual int reload();
+private:
+    virtual SrsConfDirective* get_or_create(SrsConfDirective* node, std::string name);
+public:
+    /**
+    * dynamic set the config, for instance, for http api to set,
+    * @return ture if config changed and need to reload.
+    */
+    virtual bool set_log_file(std::string file);
+    virtual bool set_log_tank(std::string tank);
+    virtual bool set_log_level(std::string level);
+public:
+    virtual int force_reload_log_file();
+    virtual int force_reload_log_tank();
+    virtual int force_reload_log_level();
 private:
     virtual int reload_http_api(SrsConfDirective* old_root);
     virtual int reload_http_stream(SrsConfDirective* old_root);
@@ -231,9 +250,10 @@ public:
     virtual std::string         get_ingest_input_url(SrsConfDirective* ingest);
 // log section
 public:
-    virtual bool                get_srs_log_tank_file();
-    virtual std::string         get_srs_log_level();
-    virtual std::string         get_srs_log_file();
+    virtual bool                get_log_tank_file();
+    virtual std::string         get_log_level();
+    virtual std::string         get_log_file();
+    virtual bool                get_ffmpeg_log_enabled();
     virtual std::string         get_ffmpeg_log_dir();
 // hls section
 private:
@@ -270,6 +290,14 @@ public:
     virtual bool                get_vhost_http_enabled(std::string vhost);
     virtual std::string         get_vhost_http_mount(std::string vhost);
     virtual std::string         get_vhost_http_dir(std::string vhost);
+// http heartbeart section
+private:
+    virtual SrsConfDirective*   get_heartbeart();
+public:
+    virtual bool                get_heartbeat_enabled();
+    virtual int64_t             get_heartbeat_interval();
+    virtual std::string         get_heartbeat_url();
+    virtual std::string         get_heartbeat_device_id();
 };
 
 /**

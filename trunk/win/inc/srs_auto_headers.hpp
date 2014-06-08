@@ -2,23 +2,40 @@
 #define SRS_AUTO_HEADER_HPP
 
 #ifdef WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#include <WS2tcpip.h>
 #include <WinSock2.h>
+#include <WS2tcpip.h>
+#include "unistd.h"
 #include "inttypes.h"
 #include "utils.h"
 
+#ifdef ERROR_SUCCESS
+#undef ERROR_SUCCESS
+#define ERROR_SUCCESS 0
 #endif
 
-#define SRS_AUTO_BUILD_DATE "2014-05-04 20:23:56"
+#endif
+
+#define SRS_AUTO_BUILD_DATE ""
 #define SRS_AUTO_USER_CONFIGURE
 #define SRS_AUTO_CONFIGURE
-#define SRS_AUTO_UNAME "modified by hetao.su"
+#define SRS_AUTO_UNAME
+#define SRS_AUTO_CONSTRIBUTORS ""
+
 #define SRS_AUTO_SSL
-//#define SRS_AUTO_HTTP_SERVER
-//#define SRS_AUTO_HTTP_API
-//#define SRS_AUTO_HTTP_PARSER
-//#define SRS_AUTO_HTTP_CALLBACK
+
+#define SRS_AUTO_HLS
+#define SRS_AUTO_HTTP_SERVER
+#define SRS_AUTO_HTTP_PARSER
+#define SRS_AUTO_HTTP_API
+#define SRS_AUTO_HTTP_CALLBACK
+#define SRS_AUTO_DVR
+
+//#define SRS_AUTO_INGEST
+//#define SRS_AUTO_TRANSCODE
+//#define SRS_AUTO_FFMPEG
+
+//#define SRS_AUTO_GPERF_MC
+//#define SRS_AUTO_GPERF_MP
+//#define SRS_AUTO_GPERF_CP
 
 #endif

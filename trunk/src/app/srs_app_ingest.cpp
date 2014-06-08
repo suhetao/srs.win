@@ -32,6 +32,7 @@ using namespace std;
 #include <srs_kernel_log.hpp>
 #include <srs_app_ffmpeg.hpp>
 #include <srs_app_pithy_print.hpp>
+#include <srs_kernel_utility.hpp>
 
 // when error, ingester sleep for a while and retry.
 // ingest never sleep a long time, for we must start the stream ASAP.
@@ -53,7 +54,7 @@ SrsIngester::SrsIngester()
 {
     _srs_config->subscribe(this);
     
-    pthread = new SrsThread(this, SRS_AUTO_INGESTER_SLEEP_US);
+    pthread = new SrsThread(this, SRS_AUTO_INGESTER_SLEEP_US, true);
     pithy_print = new SrsPithyPrint(SRS_STAGE_INGESTER);
 }
 
@@ -262,18 +263,20 @@ int SrsIngester::initialize_ffmpeg(SrsFFMPEG* ffmpeg, SrsConfDirective* vhost, S
         app = app.substr(0, pos);
     }
     
-    std::string log_file;
+    std::string log_file = "/dev/null"; // disabled
     // write ffmpeg info to log file.
-    log_file = _srs_config->get_ffmpeg_log_dir();
-    log_file += "/";
-    log_file += "ffmpeg-ingest";
-    log_file += "-";
-    log_file += vhost->arg0();
-    log_file += "-";
-    log_file += app;
-    log_file += "-";
-    log_file += stream;
-    log_file += ".log";
+    if (_srs_config->get_ffmpeg_log_enabled()) {
+        log_file = _srs_config->get_ffmpeg_log_dir();
+        log_file += "/";
+        log_file += "ffmpeg-ingest";
+        log_file += "-";
+        log_file += vhost->arg0();
+        log_file += "-";
+        log_file += app;
+        log_file += "-";
+        log_file += stream;
+        log_file += ".log";
+    }
     
     // input
     std::string input_type = _srs_config->get_ingest_input_type(ingest);

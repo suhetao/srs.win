@@ -26,6 +26,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <srs_kernel_error.hpp>
 #include <srs_kernel_log.hpp>
 
+// const time for st to convert to us
+#define SRS_TIME_MILLISECONDS 1000
+#define SRS_TIME_SECONDS 1000000
+
 ISrsThreadHandler::ISrsThreadHandler()
 {
 }
@@ -54,7 +58,7 @@ void ISrsThreadHandler::on_thread_stop()
 {
 }
 
-SrsThread::SrsThread(ISrsThreadHandler* thread_handler, int64_t interval_us)
+SrsThread::SrsThread(ISrsThreadHandler* thread_handler, int64_t interval_us, bool joinable)
 {
     handler = thread_handler;
     cycle_interval_us = interval_us;
@@ -62,6 +66,7 @@ SrsThread::SrsThread(ISrsThreadHandler* thread_handler, int64_t interval_us)
     tid = NULL;
     loop = false;
     _cid = -1;
+    _joinable = joinable;
 }
 
 SrsThread::~SrsThread()
@@ -83,7 +88,7 @@ int SrsThread::start()
         return ret;
     }
     
-    if((tid = st_thread_create(thread_fun, this, 1, 0)) == NULL){
+    if((tid = st_thread_create(thread_fun, this, (_joinable? 1:0), 0)) == NULL){
         ret = ERROR_ST_CREATE_CYCLE_THREAD;
         srs_error("st_thread_create failed. ret=%d", ret);
         return ret;
@@ -93,7 +98,7 @@ int SrsThread::start()
     loop = true;
     
     // wait for cid to ready, for parent thread to get the cid.
-    while (_cid < 0) {
+    while (_cid < 0 && loop) {
         st_usleep(10 * SRS_TIME_MILLISECONDS);
     }
     
