@@ -63,7 +63,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ws2_32.lib ..\..\lib\ssleay32.lib ..\..\lib\libeay32.lib ..\..\lib\http-parser.lib"
+				AdditionalDependencies="ws2_32.lib ..\..\lib\ssleay32.lib ..\..\lib\libeay32.lib ..\..\lib\http-parser.lib ..\..\lib\st.lib"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -137,7 +137,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ws2_32.lib ..\..\lib\ssleay32.lib ..\..\lib\libeay32.lib ..\..\lib\http-parser.lib"
+				AdditionalDependencies="ws2_32.lib ..\..\lib\ssleay32.lib ..\..\lib\libeay32.lib ..\..\lib\http-parser.lib ..\..\lib\st.lib"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -638,62 +638,6 @@
 				RelativePath="..\src\utils.c"
 				>
 			</File>
-			<Filter
-				Name="lib"
-				>
-				<Filter
-					Name="st"
-					>
-					<File
-						RelativePath="..\lib\st\common.h"
-						>
-					</File>
-					<File
-						RelativePath="..\lib\st\event_win.c"
-						>
-					</File>
-					<File
-						RelativePath="..\lib\st\io_win.c"
-						>
-					</File>
-					<File
-						RelativePath="..\lib\st\key.c"
-						>
-					</File>
-					<File
-						RelativePath="..\lib\st\md.h"
-						>
-					</File>
-					<File
-						RelativePath="..\lib\st\neterr.h"
-						>
-					</File>
-					<File
-						RelativePath="..\lib\st\public.h"
-						>
-					</File>
-					<File
-						RelativePath="..\lib\st\sched_win.c"
-						>
-					</File>
-					<File
-						RelativePath="..\lib\st\setjmp.c"
-						>
-					</File>
-					<File
-						RelativePath="..\lib\st\st.h"
-						>
-					</File>
-					<File
-						RelativePath="..\lib\st\stk.c"
-						>
-					</File>
-					<File
-						RelativePath="..\lib\st\sync.c"
-						>
-					</File>
-				</Filter>
-			</Filter>
 			<Filter
 				Name="inc"
 				>

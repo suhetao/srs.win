@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libeay32", "libeay32.vcproj
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "http-parser", "http-parser.vcproj", "{DC7A979E-F788-4D89-8596-F7E8B4542835}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "st", "st.vcproj", "{73121819-A315-4CDC-B31A-43513C64F072}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -31,6 +33,10 @@ Global
 		{DC7A979E-F788-4D89-8596-F7E8B4542835}.Debug|Win32.Build.0 = Debug|Win32
 		{DC7A979E-F788-4D89-8596-F7E8B4542835}.Release|Win32.ActiveCfg = Release|Win32
 		{DC7A979E-F788-4D89-8596-F7E8B4542835}.Release|Win32.Build.0 = Release|Win32
+		{73121819-A315-4CDC-B31A-43513C64F072}.Debug|Win32.ActiveCfg = Debug|Win32
+		{73121819-A315-4CDC-B31A-43513C64F072}.Debug|Win32.Build.0 = Debug|Win32
+		{73121819-A315-4CDC-B31A-43513C64F072}.Release|Win32.ActiveCfg = Release|Win32
+		{73121819-A315-4CDC-B31A-43513C64F072}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
